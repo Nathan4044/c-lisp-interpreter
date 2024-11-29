@@ -5,11 +5,13 @@
 #include "value.h"
 #include <stdint.h>
 
+// Enum representing the individual bytecode instructions for the VM.
 typedef enum {
     OP_CONSTANT,
     OP_RETURN
 } OpCode;
 
+// A chunk is a container for constants and bytecode instructions.
 typedef struct {
     int count;
     int capacity;

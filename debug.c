@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
+// disassembleChunk prints out a human-readable representation of a chunk of
+// bytecode.
 void disassembleChunk(Chunk *chunk, const char *name) {
     printf("== %s ==\n", name);
 
@@ -11,11 +13,13 @@ void disassembleChunk(Chunk *chunk, const char *name) {
     }
 }
 
+// Prints a representation of a single byte instruction.
 static int simpleInstruction(const char* name, int offset) {
     printf("%s\n", name);
     return offset + 1;
 }
 
+// Prints a representation of an instruction that references a constant.
 static int constantInstruction(const char* name, Chunk* chunk, int offset) {
     uint8_t constant = chunk->code[offset + 1];
     printf("%-16s %4d '", name, constant);
@@ -25,6 +29,8 @@ static int constantInstruction(const char* name, Chunk* chunk, int offset) {
     return offset + 2;
 }
 
+// disassembleInstruction prints the instruction at the provided offset.
+// It dispatches to the correct printing function depending on the instruction.
 int disassembleInstruction(Chunk *chunk, int offset) {
     printf("%04d ", offset);
 

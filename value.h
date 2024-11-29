@@ -3,8 +3,10 @@
 
 #include "common.h"
 
+// Value represents a value instance in the VM.
 typedef double Value;
 
+// ValueArray is a dynamically allocated array of Values.
 typedef struct {
     int capacity;
     int count;
