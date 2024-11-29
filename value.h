@@ -3,6 +3,16 @@
 
 #include "common.h"
 
-typedef double value;
+typedef double Value;
+
+typedef struct {
+    int capacity;
+    int count;
+    Value* values;
+} ValueArray;
 
 #endif
+
+void initValueArray(ValueArray* array);
+void writeValueArray(ValueArray* array, Value value);
+void freeValueArray(ValueArray* array);
