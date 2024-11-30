@@ -1,5 +1,6 @@
 #include "chunk.h"
 #include "common.h"
+#include "compiler.h"
 #include "debug.h"
 #include <stdio.h>
 #include "vm.h"
@@ -88,8 +89,7 @@ static InterpretResult run() {
 }
 
 // The function called to handle the execution of the provided Chunk in the VM.
-InterpretResult interpret(Chunk *chunk) {
-    vm.chunk = chunk;
-    vm.ip = vm.chunk->code;
-    return run();
+InterpretResult interpret(const char* source) {
+    compile(source);
+    return INTERPRET_OK;
 }
