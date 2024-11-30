@@ -1,14 +1,35 @@
 #include "chunk.h"
 #include "common.h"
+#include "debug.h"
 #include <stdio.h>
 #include "vm.h"
 
 VM vm;
 
+// Reset the VM's stack my moving the pointer for the top of the stack to
+// the beginning of the stack array.
+static void resetStack() {
+    vm.stackTop = vm.stack;
+}
+
+// Set the initial state of the VM.
 void initVM() {
+    resetStack();
 }
 
 void freeVM() {
+}
+
+// Add a new Value to the top of the VM's value stack.
+void push(Value value) {
+    *vm.stackTop = value;
+    vm.stackTop++;
+}
+
+// Remove the top Value from the VM's value stack and return it.
+Value pop() {
+    vm.stackTop--;
+    return *vm.stackTop;
 }
 
 // The run function is the main part of the interpreter.
@@ -24,15 +45,27 @@ static InterpretResult run() {
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
 
     for (;;) {
+#ifdef DEBUG_TRACE_EXECUTION
+        printf("        ");
+        for (Value* slot = vm.stack; slot < vm.stackTop; slot++) {
+            printf("[ ");
+            printValue(*slot);
+            printf(" ]");
+        }
+        printf("\n");
+        disassembleInstruction(vm.chunk,
+                (int)(vm.ip - vm.chunk->code));
+#endif
         uint8_t instruction;
         switch(instruction = READ_BYTE()) {
             case OP_CONSTANT: {
                 Value constant = READ_CONSTANT();
-                printValue(constant);
-                printf("\n");
+                push(constant);
                 break;
             }
             case OP_RETURN: {
+                printValue(pop());
+                printf("\n");
                 return INTERPRET_OK;
             }
         }
