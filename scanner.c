@@ -110,10 +110,51 @@ static void skipWhitespace() {
     }
 }
 
-static TokenType identifierType() {
+// Check if the currently selected characters compromise the rest of a keyword
+// by checking first that the length of the remaining characters is the same as
+// the length of the remaining keyword. If so, then check that the remaining
+// characters match the remaining characters of the keyword.
+static TokenType checkKeyword(
+        int start, int length, const char* rest, TokenType type
+        ) {
+    if (scanner.current - scanner.start == start + length &&
+            memcmp(scanner.start + start, rest, length) == 0) {
+        return type;
+    }
+
     return TOKEN_IDENTIFIER;
 }
 
+// Check if the current identifier is actually a keyword, reserved by the
+// language. Return the type of the matched keyword if any, else it is
+// an identifier.
+static TokenType identifierType() {
+    switch (scanner.start[0]) {
+        case 'a': return checkKeyword(1, 2, "nd", TOKEN_AND);
+        case 'd': return checkKeyword(1, 2, "ef", TOKEN_DEF);
+        case 'i': return checkKeyword(1, 1, "f", TOKEN_IF);
+        case 'f':
+            if (scanner.current - scanner.start > 1) {
+                switch(scanner.start[1]) {
+                    case 'a': return checkKeyword(2, 3, "lse", TOKEN_FALSE);
+                    case 'o': return checkKeyword(2, 1, "r", TOKEN_FOR);
+                }
+            }
+            break;
+        case 'l': return checkKeyword(1, 1, "ambda", TOKEN_LAMBDA);
+        case 'o': return checkKeyword(1, 1, "r", TOKEN_OR);
+        case 'p': return checkKeyword(1, 4, "rint", TOKEN_PRINT);
+        case 't': return checkKeyword(1, 3, "rue", TOKEN_TRUE);
+        case 'w': return checkKeyword(1, 4, "hile", TOKEN_WHILE);
+    }
+
+    return TOKEN_IDENTIFIER;
+}
+
+// Read the remaining characters of an identifier, which (after the initial
+// letter or underscore) can be any alphanumeric character or an underscore.
+//
+// TODO: expand this later to match the original lisp implementation.
 static Token identifier() {
     while (isAlpha(peek()) || isDigit(peek())) advance();
     return makeToken(identifierType());
