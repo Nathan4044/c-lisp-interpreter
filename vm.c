@@ -2,6 +2,7 @@
 #include "common.h"
 #include "compiler.h"
 #include "debug.h"
+#include <stdint.h>
 #include <stdio.h>
 #include "vm.h"
 
@@ -31,6 +32,26 @@ void push(Value value) {
 Value pop() {
     vm.stackTop--;
     return *vm.stackTop;
+}
+
+static void add(uint8_t count) {
+    Value result = 0;
+
+    for (int i = 0; i < count; i++) {
+        result += pop();
+    }
+
+    push(result);
+}
+
+static void multiply(uint8_t count) {
+    Value result = 1;
+
+    for (int i = 0; i < count; i++) {
+        result *= pop();
+    }
+
+    push(result);
 }
 
 // The run function is the main part of the interpreter.
@@ -70,9 +91,9 @@ static InterpretResult run() {
                 push(constant);
                 break;
             }
-            case OP_ADD:        BINARY_OP(+); break;
+            case OP_ADD:        add(READ_BYTE()); break;
             case OP_SUBTRACT:   BINARY_OP(-); break;
-            case OP_MULTIPLY:   BINARY_OP(*); break;
+            case OP_MULTIPLY:   multiply(READ_BYTE()); break;
             case OP_DIVIDE:     BINARY_OP(/); break;
             case OP_NEGATE: push(-pop()); break;
             case OP_RETURN: {

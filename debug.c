@@ -29,6 +29,14 @@ static int constantInstruction(const char* name, Chunk* chunk, int offset) {
     return offset + 2;
 }
 
+// Prints a representation of an instruction that references a constant.
+static int rangeInstruction(const char* name, Chunk* chunk, int offset) {
+    uint8_t constant = chunk->code[offset + 1];
+    printf("%-16s %4d\n", name, constant);
+
+    return offset + 2;
+}
+
 // disassembleInstruction prints the instruction at the provided offset.
 // It dispatches to the correct printing function depending on the instruction.
 int disassembleInstruction(Chunk *chunk, int offset) {
@@ -47,11 +55,11 @@ int disassembleInstruction(Chunk *chunk, int offset) {
         case OP_CONSTANT:
             return constantInstruction("OP_CONSTANT", chunk, offset);
         case OP_ADD:
-			return simpleInstruction("OP_ADD", offset);
+			return rangeInstruction("OP_ADD", chunk, offset);
         case OP_SUBTRACT:
 			return simpleInstruction("OP_SUBTRACT", offset);
         case OP_MULTIPLY:
-			return simpleInstruction("OP_MULTIPLY", offset);
+			return rangeInstruction("OP_MULTIPLY", chunk, offset);
         case OP_DIVIDE:
 			return simpleInstruction("OP_DIVIDE", offset);
         case OP_NEGATE:
