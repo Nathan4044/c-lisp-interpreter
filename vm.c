@@ -4,6 +4,7 @@
 #include "debug.h"
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "vm.h"
 
 VM vm;
@@ -34,6 +35,10 @@ Value pop() {
     return *vm.stackTop;
 }
 
+static Value readBack(uint8_t count) {
+    return *(vm.stackTop - count);
+}
+
 static void add(uint8_t count) {
     Value result = 0;
 
@@ -52,6 +57,34 @@ static void multiply(uint8_t count) {
     }
 
     push(result);
+}
+
+static void subtract(uint8_t count) {
+    Value sub = 0;
+
+    for (int i = 1; i < count; i++) {
+        sub += pop();
+    }
+
+    push(pop() - sub);
+}
+
+static void divide(uint8_t count) {
+    Value first = readBack(count);
+
+    for (int i = 1; i < count; i++) {
+        Value div = pop();
+
+        if (div == 0) {
+            fprintf(stderr, "attemped divide by zero\n");
+            exit(3);
+        }
+
+        first /= div;
+    }
+
+    pop();
+    push(first);
 }
 
 // The run function is the main part of the interpreter.
@@ -92,9 +125,9 @@ static InterpretResult run() {
                 break;
             }
             case OP_ADD:        add(READ_BYTE()); break;
-            case OP_SUBTRACT:   BINARY_OP(-); break;
+            case OP_SUBTRACT:   subtract(READ_BYTE()); break;
             case OP_MULTIPLY:   multiply(READ_BYTE()); break;
-            case OP_DIVIDE:     BINARY_OP(/); break;
+            case OP_DIVIDE:     divide(READ_BYTE()); break;
             case OP_NEGATE: push(-pop()); break;
             case OP_RETURN: {
                 printValue(pop());

@@ -198,10 +198,44 @@ static void sExpression() {
             }
             break;
         }
+        case TOKEN_MINUS: {
+            operandCount = compileArgs();
+
+            if (operandCount < 0) {
+                return;
+            }
+            advance();
+
+            switch (operandCount) {
+                case 0:
+                    error("attemped to call - with no arguments");
+                    return;
+                case 1:
+                    emitByte(OP_NEGATE);
+                    break;
+                default:
+                    emitBytes(OP_SUBTRACT, operandCount);
+            }
+            break;
+        }
+        case TOKEN_SLASH: {
+            operandCount = compileArgs();
+
+            if (operandCount < 0) {
+                return;
+            }
+            advance();
+
+            if (operandCount == 0) {
+                error("attemped to call / with no arguments");
+                return;
+            }
+            emitBytes(OP_DIVIDE, operandCount);
+            break;
+        }
+        // TODO: function calls and builtins
         default: return; // unreachable
     }
-
-    printf("completed\n");
 }
 
 static void unary() {
