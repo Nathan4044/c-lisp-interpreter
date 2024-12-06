@@ -5,7 +5,7 @@
 
 typedef enum {
     VAL_BOOL,
-    VAL_NIL,
+    VAL_NULL,
     VAL_NUMBER,
 } ValueType;
 
@@ -25,7 +25,7 @@ typedef struct {
 #define AS_NUMBER(value) ((value).as.number)
 
 #define BOOL_VAL(value) ((Value){VAL_BOOL, {.boolean = value}})
-#define NIL_VAL(value) ((Value){VAL_NIL, {.number = 0}})
+#define NULL_VAL ((Value){VAL_NULL, {.number = 0}})
 #define NUMBER_VAL(value) ((Value){VAL_NUMBER, {.number = value}})
 
 // ValueArray is a dynamically allocated array of Values.

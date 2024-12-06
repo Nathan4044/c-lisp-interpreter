@@ -142,6 +142,7 @@ static TokenType identifierType() {
             }
             break;
         case 'l': return checkKeyword(1, 1, "ambda", TOKEN_LAMBDA);
+        case 'n': return checkKeyword(1, 3, "ull", TOKEN_NULL);
         case 'o': return checkKeyword(1, 1, "r", TOKEN_OR);
         case 'p': return checkKeyword(1, 4, "rint", TOKEN_PRINT);
         case 't': return checkKeyword(1, 3, "rue", TOKEN_TRUE);

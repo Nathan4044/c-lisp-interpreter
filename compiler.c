@@ -262,6 +262,15 @@ static void unary() {
     }
 }
 
+static void literal() {
+    switch (parser.previous.type) {
+        case TOKEN_FALSE: emitByte(OP_FALSE); break;
+        case TOKEN_NULL: emitByte(OP_NULL); break;
+        case TOKEN_TRUE: emitByte(OP_TRUE); break;
+        default: return; // unreachable
+    }
+}
+
 static void expression() {
     parsePrecedence(PREC_EXPRESSION);
 }
@@ -284,14 +293,14 @@ ParseRule rules[] = {
     [TOKEN_STRING]          = {NULL, PREC_NONE},
     [TOKEN_NUMBER]          = {number, PREC_NONE},
     [TOKEN_AND]             = {NULL, PREC_NONE},
-    [TOKEN_FALSE]           = {NULL, PREC_NONE},
+    [TOKEN_FALSE]           = {literal, PREC_NONE},
     [TOKEN_FOR]             = {NULL, PREC_NONE},
     [TOKEN_DEF]             = {NULL, PREC_NONE},
     [TOKEN_IF]              = {NULL, PREC_NONE},
-    [TOKEN_NULL]            = {NULL, PREC_NONE},
+    [TOKEN_NULL]            = {literal, PREC_NONE},
     [TOKEN_OR]              = {NULL, PREC_NONE},
     [TOKEN_PRINT]           = {NULL, PREC_NONE},
-    [TOKEN_TRUE]            = {NULL, PREC_NONE},
+    [TOKEN_TRUE]            = {literal, PREC_NONE},
     [TOKEN_WHILE]           = {NULL, PREC_NONE},
     [TOKEN_ERROR]           = {NULL, PREC_NONE},
     [TOKEN_EOF]             = {NULL, PREC_NONE},
