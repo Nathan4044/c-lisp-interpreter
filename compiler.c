@@ -242,6 +242,42 @@ static void sExpression() {
             emitBytes(OP_DIVIDE, operandCount);
             break;
         }
+        case TOKEN_NOT: {
+            operandCount = compileArgs();
+
+            if (operandCount < 0) {
+                return;
+            }
+            advance();
+
+            switch (operandCount) {
+                case 0:
+                    error("attemped to call / with no arguments");
+                    return;
+                case 1:
+                    emitByte(OP_NOT);
+                    break;
+                default:
+                    error("attemped to call / with too many arguments");
+                    return;
+            }
+        }
+        case TOKEN_EQUAL: {
+            operandCount = compileArgs();
+
+            if (operandCount < 0) {
+                return;
+            }
+            advance();
+
+            switch (operandCount) {
+                case 0:
+                    emitByte(OP_TRUE);
+                    break;
+                default:
+                    emitBytes(OP_EQUAL, operandCount);
+            }
+        }
         // TODO: function calls and builtins
         default: return; // unreachable
     }

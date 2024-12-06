@@ -51,9 +51,18 @@ Value pop() {
     return *vm.stackTop;
 }
 
+Value popMultiple(int count) {
+    vm.stackTop -= count;
+    return *vm.stackTop;
+}
+
 // Return the Value n positions from the top, without removing it.
 static Value peek(int distance) {
     return vm.stackTop[-1 - distance];
+}
+
+static bool isFalsey(Value value) {
+    return IS_NULL(value) || (IS_BOOL(value) && !AS_BOOL(value));
 }
 
 static Value readBack(uint8_t count) {
@@ -135,6 +144,19 @@ static InterpretResult divide(uint8_t count) {
     return INTERPRET_OK;
 }
 
+static void equal(uint8_t count) {
+    bool result = true;
+    for (int i = 0; i < count - 1; i++) {
+        if (!valuesEqual(peek(count-i-1), peek(count-i-2))) {
+            result = false;
+            break;
+        }
+    }
+
+    popMultiple(count);
+    push(BOOL_VAL(result));
+}
+
 // The run function is the main part of the interpreter.
 //
 // It consists of a central loop that continually reads through and executes
@@ -175,6 +197,7 @@ static InterpretResult run() {
             case OP_NULL: push(NULL_VAL); break;
             case OP_TRUE: push(BOOL_VAL(true)); break;
             case OP_FALSE: push(BOOL_VAL(false)); break;
+            case OP_EQUAL: equal(READ_BYTE()); break;
             case OP_ADD:
                 if (add(READ_BYTE()) != INTERPRET_OK) {
                     return INTERPRET_RUNTIME_ERROR;
@@ -202,6 +225,8 @@ static InterpretResult run() {
                 }
                 push(NUMBER_VAL(-AS_NUMBER(pop())));
                 break;
+            case OP_NOT:
+                push(BOOL_VAL(isFalsey(pop())));
             case OP_RETURN: 
                 printValue(pop());
                 printf("\n");

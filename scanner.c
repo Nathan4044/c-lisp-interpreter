@@ -141,8 +141,14 @@ static TokenType identifierType() {
                 }
             }
             break;
-        case 'l': return checkKeyword(1, 1, "ambda", TOKEN_LAMBDA);
-        case 'n': return checkKeyword(1, 3, "ull", TOKEN_NULL);
+        case 'l': return checkKeyword(1, 5, "ambda", TOKEN_LAMBDA);
+        case 'n':
+            if (scanner.current - scanner.start > 1) {
+                switch (scanner.start[1]) {
+                    case 'o': return checkKeyword(2, 1, "t", TOKEN_NOT);
+                    case 'u': return checkKeyword(2, 2, "ll", TOKEN_NULL);
+                }
+            }
         case 'o': return checkKeyword(1, 1, "r", TOKEN_OR);
         case 'p': return checkKeyword(1, 4, "rint", TOKEN_PRINT);
         case 't': return checkKeyword(1, 3, "rue", TOKEN_TRUE);
@@ -209,6 +215,7 @@ Token scanToken() {
         case '+': return makeToken(TOKEN_PLUS);
         case '*': return makeToken(TOKEN_STAR);
         case '/': return makeToken(TOKEN_SLASH);
+        case '=': return makeToken(TOKEN_EQUAL);
         case '<': {
             return makeToken(
                     match('=') ? TOKEN_LESS_EQUAL : TOKEN_LESS);

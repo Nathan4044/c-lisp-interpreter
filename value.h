@@ -19,6 +19,7 @@ typedef struct {
 } Value;
 
 #define IS_BOOL(value) ((value).type == VAL_BOOL)
+#define IS_NULL(value) ((value).type == VAL_NULL)
 #define IS_NUMBER(value) ((value).type == VAL_NUMBER)
 
 #define AS_BOOL(value) ((value).as.boolean)
@@ -35,10 +36,11 @@ typedef struct {
     Value* values;
 } ValueArray;
 
-#endif
-
+bool valuesEqual(Value a, Value b);
 void initValueArray(ValueArray* array);
 void writeValueArray(ValueArray* array, Value value);
 void freeValueArray(ValueArray* array);
 
 void printValue(Value value);
+
+#endif

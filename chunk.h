@@ -8,6 +8,7 @@
 // Enum representing the individual bytecode instructions for the VM.
 typedef enum {
     OP_CONSTANT,
+    OP_EQUAL,
     OP_NULL,
     OP_TRUE,
     OP_FALSE,
@@ -16,7 +17,8 @@ typedef enum {
     OP_MULTIPLY,
     OP_DIVIDE,
     OP_NEGATE,
-    OP_RETURN
+    OP_NOT,
+    OP_RETURN,
 } OpCode;
 
 // A chunk is a container for constants and bytecode instructions.
