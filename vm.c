@@ -1,10 +1,12 @@
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "chunk.h"
 #include "common.h"
 #include "compiler.h"
 #include "debug.h"
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include "vm.h"
 
 VM vm;
@@ -13,6 +15,19 @@ VM vm;
 // the beginning of the stack array.
 static void resetStack() {
     vm.stackTop = vm.stack;
+}
+
+static void runtimeError(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    va_end(args);
+    fputs("\n", stderr);
+
+    size_t instruction = vm.ip - vm.chunk->code - 1;
+    int line = vm.chunk->lines[instruction];
+    fprintf(stderr, "[line %d] in script\n", line);
+    resetStack();
 }
 
 // Set the initial state of the VM.
@@ -35,48 +50,79 @@ Value pop() {
     return *vm.stackTop;
 }
 
+// Return the Value n positions from the top, without removing it.
+static Value peek(int distance) {
+    return vm.stackTop[-1 - distance];
+}
+
 static Value readBack(uint8_t count) {
     return *(vm.stackTop - count);
 }
 
-static void add(uint8_t count) {
-    Value result = 0;
+static InterpretResult add(uint8_t count) {
+    double result = 0;
 
     for (int i = 0; i < count; i++) {
-        result += pop();
+        if (!IS_NUMBER(peek(0))) {
+            runtimeError("Operand must be a number.");
+            return INTERPRET_RUNTIME_ERROR;
+        }
+        result += AS_NUMBER(pop());
     }
 
-    push(result);
+    push(NUMBER_VAL(result));
+    return INTERPRET_OK;
 }
 
-static void multiply(uint8_t count) {
-    Value result = 1;
+static InterpretResult multiply(uint8_t count) {
+    double result = 1;
 
     for (int i = 0; i < count; i++) {
-        result *= pop();
+        if (!IS_NUMBER(peek(0))) {
+            runtimeError("Operand must be a number.");
+            return INTERPRET_RUNTIME_ERROR;
+        }
+
+        result *= AS_NUMBER(pop());
     }
 
-    push(result);
+    push(NUMBER_VAL(result));
+    return INTERPRET_OK;
 }
 
-static void subtract(uint8_t count) {
-    Value sub = 0;
+static InterpretResult subtract(uint8_t count) {
+    double sub = 0;
 
     for (int i = 1; i < count; i++) {
-        sub += pop();
+        if (!IS_NUMBER(peek(0))) {
+            runtimeError("Operand must be a number.");
+            return INTERPRET_RUNTIME_ERROR;
+        }
+
+        sub += AS_NUMBER(pop());
     }
 
-    push(pop() - sub);
+    push(NUMBER_VAL(AS_NUMBER(pop()) - sub));
+    return INTERPRET_OK;
 }
 
-static void divide(uint8_t count) {
-    Value first = readBack(count);
+static InterpretResult divide(uint8_t count) {
+    if (!IS_NUMBER(peek(count))) {
+        runtimeError("Operand must be a number.");
+        return INTERPRET_RUNTIME_ERROR;
+    }
+    double first = AS_NUMBER(readBack(count));
 
     for (int i = 1; i < count; i++) {
-        Value div = pop();
+        if (!IS_NUMBER(peek(0))) {
+            runtimeError("Operand must be a number.");
+            return INTERPRET_RUNTIME_ERROR;
+        }
+
+        double div = AS_NUMBER(pop());
 
         if (div == 0) {
-            fprintf(stderr, "attemped divide by zero\n");
+            runtimeError("Attemped divide by zero");
             exit(3);
         }
 
@@ -84,7 +130,8 @@ static void divide(uint8_t count) {
     }
 
     pop();
-    push(first);
+    push(NUMBER_VAL(first));
+    return INTERPRET_OK;
 }
 
 // The run function is the main part of the interpreter.
@@ -124,16 +171,37 @@ static InterpretResult run() {
                 push(constant);
                 break;
             }
-            case OP_ADD:        add(READ_BYTE()); break;
-            case OP_SUBTRACT:   subtract(READ_BYTE()); break;
-            case OP_MULTIPLY:   multiply(READ_BYTE()); break;
-            case OP_DIVIDE:     divide(READ_BYTE()); break;
-            case OP_NEGATE: push(-pop()); break;
-            case OP_RETURN: {
+            case OP_ADD:
+                if (add(READ_BYTE()) != INTERPRET_OK) {
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                break;
+            case OP_SUBTRACT:   
+                if (subtract(READ_BYTE()) != INTERPRET_OK) {
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                break;
+            case OP_MULTIPLY:   
+                if (multiply(READ_BYTE()) != INTERPRET_OK) {
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                break;
+            case OP_DIVIDE:     
+                if (divide(READ_BYTE()) != INTERPRET_OK) {
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                break;
+            case OP_NEGATE:
+                if (!IS_NUMBER(peek(0))) {
+                    runtimeError("Operand must be a number.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                push(NUMBER_VAL(-AS_NUMBER(pop())));
+                break;
+            case OP_RETURN: 
                 printValue(pop());
                 printf("\n");
                 return INTERPRET_OK;
-            }
         }
     }
 

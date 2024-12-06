@@ -139,7 +139,7 @@ static void parsePrecedence(Precedence precedence) {
 
 static void number() {
     double value = strtod(parser.previous.start, NULL);
-    emitConstant(value);
+    emitConstant(NUMBER_VAL(value));
 }
 
 static int compileArgs() {
@@ -179,7 +179,7 @@ static void sExpression() {
 
             switch (operandCount) {
                 case 0:
-                    emitConstant(0);
+                    emitConstant(NUMBER_VAL(0));
                     break;
                 case 1:
                     break;
@@ -198,7 +198,7 @@ static void sExpression() {
 
             switch (operandCount) {
                 case 0:
-                    emitConstant(1);
+                    emitConstant(NUMBER_VAL(1));
                     break;
                 case 1:
                     break;

@@ -30,5 +30,5 @@ void freeValueArray(ValueArray *array) {
 
 // printValue prints a human-readable representation of a Value.
 void printValue(Value value) {
-    printf("%g", value);
+    printf("%g", AS_NUMBER(value));
 }
