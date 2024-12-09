@@ -8,8 +8,7 @@ typedef enum {
     TOKEN_MINUS, TOKEN_PLUS, TOKEN_SLASH,
     TOKEN_STAR, TOKEN_EQUAL,
     // one or two character tokens
-    TOKEN_GREATER, TOKEN_GREATER_EQUAL,
-    TOKEN_LESS, TOKEN_LESS_EQUAL,
+    TOKEN_GREATER, TOKEN_LESS,
     // literals
     TOKEN_IDENTIFIER, TOKEN_STRING, TOKEN_NUMBER,
     // keywords

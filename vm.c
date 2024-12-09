@@ -1,7 +1,6 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 #include "chunk.h"
 #include "common.h"
@@ -133,7 +132,7 @@ static InterpretResult divide(uint8_t count) {
 
         if (div == 0) {
             runtimeError("Attemped divide by zero");
-            exit(3);
+            return INTERPRET_RUNTIME_ERROR;
         }
 
         first /= div;
@@ -141,6 +140,68 @@ static InterpretResult divide(uint8_t count) {
 
     pop();
     push(NUMBER_VAL(first));
+    return INTERPRET_OK;
+}
+
+static InterpretResult greater(uint8_t count) {
+    bool result = true;
+
+    if (!IS_NUMBER(peek(count-1))) {
+        runtimeError("Attempted '>' with non-number");
+        return INTERPRET_RUNTIME_ERROR;
+    }
+
+    for (int i = 0; i < count - 1; i++) {
+        Value first = peek(count-i-1);
+        Value second = peek(count-i-2);
+
+        if (!IS_NUMBER(second)) {
+            runtimeError("Attempted '>' with non-number");
+            return INTERPRET_RUNTIME_ERROR;
+        }
+
+        double firstNum = AS_NUMBER(first);
+        double secondNum = AS_NUMBER(second);
+
+        if (!(firstNum > secondNum)) {
+            result = false;
+            break;
+        }
+    }
+
+    popMultiple(count);
+    push(BOOL_VAL(result));
+    return INTERPRET_OK;
+}
+
+static InterpretResult less(uint8_t count) {
+    bool result = true;
+
+    if (!IS_NUMBER(peek(count-1))) {
+        runtimeError("Attempted '<' with non-number");
+        return INTERPRET_RUNTIME_ERROR;
+    }
+
+    for (int i = 0; i < count - 1; i++) {
+        Value first = peek(count-i-1);
+        Value second = peek(count-i-2);
+
+        if (!IS_NUMBER(second)) {
+            runtimeError("Attempted '>' with non-number");
+            return INTERPRET_RUNTIME_ERROR;
+        }
+
+        double firstNum = AS_NUMBER(first);
+        double secondNum = AS_NUMBER(second);
+
+        if (!(firstNum < secondNum)) {
+            result = false;
+            break;
+        }
+    }
+
+    popMultiple(count);
+    push(BOOL_VAL(result));
     return INTERPRET_OK;
 }
 
@@ -168,12 +229,6 @@ static void equal(uint8_t count) {
 static InterpretResult run() {
 #define READ_BYTE() (*vm.ip++)
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
-#define BINARY_OP(op) \
-    do { \
-        double b = pop(); \
-        double a = pop(); \
-        push(a op b); \
-    } while (false)
 
     for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
@@ -198,6 +253,16 @@ static InterpretResult run() {
             case OP_TRUE: push(BOOL_VAL(true)); break;
             case OP_FALSE: push(BOOL_VAL(false)); break;
             case OP_EQUAL: equal(READ_BYTE()); break;
+            case OP_GREATER:
+                if (greater(READ_BYTE()) != INTERPRET_OK) {
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                break;
+            case OP_LESS:
+                if (less(READ_BYTE()) != INTERPRET_OK) {
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                break;
             case OP_ADD:
                 if (add(READ_BYTE()) != INTERPRET_OK) {
                     return INTERPRET_RUNTIME_ERROR;
@@ -227,6 +292,7 @@ static InterpretResult run() {
                 break;
             case OP_NOT:
                 push(BOOL_VAL(isFalsey(pop())));
+                break;
             case OP_RETURN: 
                 printValue(pop());
                 printf("\n");
@@ -234,7 +300,6 @@ static InterpretResult run() {
         }
     }
 
-#undef BINARY_OP
 #undef READ_CONSTANT
 #undef READ_BYTE
 }

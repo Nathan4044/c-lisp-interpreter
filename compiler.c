@@ -252,15 +252,16 @@ static void sExpression() {
 
             switch (operandCount) {
                 case 0:
-                    error("attemped to call / with no arguments");
+                    error("attemped to call not with no arguments");
                     return;
                 case 1:
                     emitByte(OP_NOT);
                     break;
                 default:
-                    error("attemped to call / with too many arguments");
+                    error("attemped to call not with too many arguments");
                     return;
             }
+            break;
         }
         case TOKEN_EQUAL: {
             operandCount = compileArgs();
@@ -277,6 +278,47 @@ static void sExpression() {
                 default:
                     emitBytes(OP_EQUAL, operandCount);
             }
+            break;
+        }
+        case TOKEN_GREATER: {
+            operandCount = compileArgs();
+
+            if (operandCount < 0) {
+                return;
+            }
+            advance();
+
+            switch (operandCount) {
+                case 0:
+                    error("attempted to call > with 0 arguments");
+                    return;
+                case 1:
+                    emitByte(OP_TRUE);
+                    break;
+                default:
+                    emitBytes(OP_GREATER, operandCount);
+            }
+            break;
+        }
+        case TOKEN_LESS: {
+            operandCount = compileArgs();
+
+            if (operandCount < 0) {
+                return;
+            }
+            advance();
+
+            switch (operandCount) {
+                case 0:
+                    error("attempted to call < with 0 arguments");
+                    return;
+                case 1:
+                    emitByte(OP_TRUE);
+                    break;
+                default:
+                    emitBytes(OP_LESS, operandCount);
+            }
+            break;
         }
         // TODO: function calls and builtins
         default: return; // unreachable
@@ -322,9 +364,7 @@ ParseRule rules[] = {
     [TOKEN_STAR]            = {NULL, PREC_NONE},
     [TOKEN_EQUAL]           = {NULL, PREC_NONE},
     [TOKEN_GREATER]         = {NULL, PREC_NONE},
-    [TOKEN_GREATER_EQUAL]   = {NULL, PREC_NONE},
     [TOKEN_LESS]            = {NULL, PREC_NONE},
-    [TOKEN_LESS_EQUAL]      = {NULL, PREC_NONE},
     [TOKEN_IDENTIFIER]      = {NULL, PREC_NONE},
     [TOKEN_STRING]          = {NULL, PREC_NONE},
     [TOKEN_NUMBER]          = {number, PREC_NONE},
