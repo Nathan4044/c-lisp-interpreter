@@ -174,6 +174,11 @@ static int compileArgs() {
             return -1;
         }
 
+        if (operandCount > UINT8_MAX) {
+            error("Too many arguments in s-expression.");
+            return -1;
+        }
+
         expression();
         operandCount++;
     }
