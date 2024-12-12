@@ -1,11 +1,14 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "chunk.h"
 #include "common.h"
 #include "compiler.h"
 #include "debug.h"
+#include "memory.h"
+#include "object.h"
 #include "value.h"
 #include "vm.h"
 
@@ -218,6 +221,72 @@ static void equal(uint8_t count) {
     push(BOOL_VAL(result));
 }
 
+static void strCat(uint8_t count) {
+    int len = 1; // 1 for null terminator
+    char* str;
+
+    for (int i = 0; i < count; i++) {
+        Value v = peek(count-i-1);
+        switch (v.type) {
+            case VAL_BOOL:
+                if (AS_BOOL(v)) {
+                    len += 4;
+                } else {
+                    len += 5;
+                }
+                break;
+            case VAL_NULL:
+                len += 4;
+                break;
+            case VAL_NUMBER:
+                sprintf(str, "%g", AS_NUMBER(v));
+                len += strlen(str);
+                break;
+            case VAL_OBJ:
+                len += AS_STRING(v)->length;
+        }
+    }
+
+    char* chars = ALLOCATE(char, len);
+    int current = 0;
+    ObjString* s;
+
+    for (int i = 0; i < count; i++) {
+        Value v = peek(count-i-1);
+        switch (v.type) {
+            case VAL_BOOL:
+                if (AS_BOOL(v)) {
+                    memcpy(chars+current, "true", 4);
+                    current += 4;
+                } else {
+                    memcpy(chars+current, "false", 5);
+                    current += 5;
+                }
+                break;
+            case VAL_NULL:
+                memcpy(chars+current, "null", 4);
+                current += 4;
+                break;
+            case VAL_NUMBER:
+                sprintf(str, "%g", AS_NUMBER(v));
+                int l = strlen(str);
+                memcpy(chars+current, str, l);
+                current += l;
+                break;
+            case VAL_OBJ:
+                s = AS_STRING(v);
+                memcpy(chars+current, s->chars, s->length);
+                current += s->length;
+                break;
+        }
+    }
+    chars[len-1] = '\0';
+
+    popMultiple(count);
+    s = takeString(chars, len);
+    push(OBJ_VAL(s));
+}
+
 // The run function is the main part of the interpreter.
 //
 // It consists of a central loop that continually reads through and executes
@@ -282,6 +351,9 @@ static InterpretResult run() {
                 if (divide(READ_BYTE()) != INTERPRET_OK) {
                     return INTERPRET_RUNTIME_ERROR;
                 }
+                break;
+            case OP_STR:
+                strCat(READ_BYTE());
                 break;
             case OP_NEGATE:
                 if (!IS_NUMBER(peek(0))) {

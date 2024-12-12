@@ -3,11 +3,13 @@
 
 #include "common.h"
 
+#define ALLOCATE(type, count) \
+    (type*)reallocate(NULL, 0, sizeof(type) * (count))
+
 // Simple macro for defining the growth of the capacity of a dynamically
 // allocated array.
 #define GROW_CAPACITY(capacity) \
     ((capacity) < 8 ? 8 : (capacity) * 2)
-
 
 // Macro for correctly calling the reallocate function.
 // Handles the growing, shrinking, allocating, and freeing of memory for

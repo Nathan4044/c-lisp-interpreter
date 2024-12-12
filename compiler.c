@@ -1,10 +1,13 @@
-#include "chunk.h"
-#include "compiler.h"
-#include "scanner.h"
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+
+#include "chunk.h"
+#include "compiler.h"
+#include "object.h"
+#include "scanner.h"
+#include "value.h"
 
 #ifdef DEBUG_PRINT_CODE
 #include "debug.h"
@@ -345,6 +348,16 @@ static void sExpression() {
             }
             break;
         }
+        case TOKEN_STR_CMD: {
+            operandCount = compileArgs();
+
+            if (operandCount < 0) {
+                return;
+            }
+            advance();
+
+            emitBytes(OP_STR, operandCount);
+        }
         // TODO: function calls and builtins
         default: return; // unreachable
     }
@@ -377,6 +390,11 @@ static void literal() {
     }
 }
 
+static void string() {
+    emitConstant(OBJ_VAL(copyString(parser.previous.start+1,
+                    parser.previous.length-2)));
+}
+
 // Currently only used to wrap parse. Remove in future if nothing changes.
 static void expression() {
     parse();
@@ -395,7 +413,7 @@ ParseFn rules[] = {
     [TOKEN_GREATER]         = NULL,
     [TOKEN_LESS]            = NULL,
     [TOKEN_IDENTIFIER]      = NULL,
-    [TOKEN_STRING]          = NULL,
+    [TOKEN_STRING]          = string,
     [TOKEN_NUMBER]          = number,
     [TOKEN_AND]             = NULL,
     [TOKEN_FALSE]           = literal,

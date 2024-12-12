@@ -21,6 +21,7 @@ typedef enum {
     OP_NEGATE,
     OP_NOT,
     OP_RETURN,
+    OP_STR,
 } OpCode;
 
 // A chunk is a container for constants and bytecode instructions.
