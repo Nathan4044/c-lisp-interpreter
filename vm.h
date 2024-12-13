@@ -1,9 +1,11 @@
 #ifndef clisp_vm_h
 #define clisp_vm_h
 
-#include "chunk.h"
-#include "value.h"
 #include <stdint.h>
+
+#include "chunk.h"
+#include "table.h"
+#include "value.h"
 
 #define STACK_MAX 256
 
@@ -13,6 +15,7 @@ typedef struct {
     uint8_t* ip; // The instruction pointer, pointing to the next byte to read.
     Value stack[STACK_MAX];
     Value* stackTop;
+    Table strings;
     Obj* objects;
 } VM;
 
