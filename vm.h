@@ -13,6 +13,7 @@ typedef struct {
     uint8_t* ip; // The instruction pointer, pointing to the next byte to read.
     Value stack[STACK_MAX];
     Value* stackTop;
+    Obj* objects;
 } VM;
 
 // A representation of the different return states of running the VM.
@@ -21,6 +22,8 @@ typedef enum {
     INTERPRET_COMPILE_ERROR,
     INTERPRET_RUNTIME_ERROR
 } InterpretResult;
+
+extern VM vm;
 
 void initVM();
 void freeVM();

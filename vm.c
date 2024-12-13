@@ -36,9 +36,11 @@ static void runtimeError(const char* format, ...) {
 // Set the initial state of the VM.
 void initVM() {
     resetStack();
+    vm.objects = NULL;
 }
 
 void freeVM() {
+    freeObjects();
 }
 
 // Add a new Value to the top of the VM's value stack.
