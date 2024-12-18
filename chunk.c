@@ -29,6 +29,10 @@ void writeChunk(Chunk *chunk, uint8_t byte, int line) {
     chunk->count++;
 }
 
+void overwriteLast(Chunk *chunk, uint8_t byte) {
+    chunk->code[chunk->count-1] = byte;
+}
+
 // freeChunk frees any allocated memory associated with a Chunk.
 void freeChunk(Chunk *chunk) {
     FREE_ARRAY(uint8_t, chunk->code, chunk->capacity);

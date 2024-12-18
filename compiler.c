@@ -97,6 +97,16 @@ static void consume(TokenType type, const char* message) {
     errorAtCurrent(message);
 }
 
+static bool check(TokenType type) {
+    return parser.current.type == type;
+}
+
+static bool match(TokenType type) {
+    if (!check(type)) return false;
+    advance();
+    return true;
+}
+
 // Write a byte to the current chunk, along with accurate line information.
 static void emitByte(uint8_t byte) {
     writeChunk(currentChunk(), byte, parser.previous.line);
@@ -111,7 +121,11 @@ static void emitBytes(uint8_t byte1, uint8_t byte2) {
 
 // Wrapper around emitByte for emitting an OP_RETURN byte.
 static void emitReturn() {
-    emitByte(OP_RETURN);
+    overwriteLast(currentChunk(), OP_RETURN);
+}
+
+static void emitPop() {
+    emitByte(OP_POP);
 }
 
 // Add the provided value as a constant to the current chunk, returning its
@@ -444,8 +458,10 @@ bool compile(const char* source, Chunk* chunk) {
     parser.panicMode = false;
 
     advance();
-    expression();
-    consume(TOKEN_EOF, "Expect end of expression.");
+    while (!match(TOKEN_EOF)) {
+        expression();
+        emitPop();
+    }
 
     endCompiler();
     return !parser.hadError;
