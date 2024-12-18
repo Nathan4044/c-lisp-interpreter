@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "vm.h"
 
@@ -14,7 +15,7 @@ static void repl() {
             break;
         }
 
-        interpret(line);
+        if (strlen(line) > 1) interpret(line);
     }
 }
 
