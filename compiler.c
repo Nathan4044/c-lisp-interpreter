@@ -23,6 +23,7 @@ typedef struct {
     // Ensures that the user isn't bombarded with error messages
     // for a single issue.
     bool panicMode;
+    int lParenCount;
 } Parser;
 
 // Definition of the function signature used for parsing different expressions.
@@ -369,7 +370,28 @@ static void print() {
     emitBytes(OP_PRINT, operandCount);
 }
 
+static void synchronize() {
+    parser.panicMode = false;
+
+    while (parser.current.type != EOF) {
+        if (parser.lParenCount == 0) return;
+
+        switch (parser.current.type) {
+            case TOKEN_LEFT_PAREN:
+                parser.lParenCount++;
+                break;
+            case TOKEN_RIGHT_PAREN:
+                parser.lParenCount--;
+            default:
+                ;
+        }
+
+        advance();
+    }
+}
+
 static void sExpression() {
+    parser.lParenCount++;
     advance();
 
     TokenType operatorType = parser.previous.type;
@@ -382,6 +404,7 @@ static void sExpression() {
     }
 
     fn();
+    parser.lParenCount--;
 }
 
 // Compile the given token to the current form of literal value.
@@ -410,6 +433,8 @@ static void expression() {
     }
 
     rule();
+
+    if (parser.panicMode) synchronize();
 }
 
 static void negate() {
@@ -462,11 +487,12 @@ bool compile(const char* source, Chunk* chunk) {
 
     parser.hadError = false;
     parser.panicMode = false;
+    parser.lParenCount = 0;
 
     advance();
     while (!match(TOKEN_EOF)) {
         expression();
-        emitPop();
+        emitPop(); // Rewritten by endCompiler() to OP_RETURN on last expression.
     }
 
     endCompiler();
