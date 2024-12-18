@@ -29,8 +29,13 @@ typedef struct {
 typedef void (*ParseFn)();
 
 static void expression();
-static ParseFn getRule(TokenType type);
-static void parse();
+
+typedef struct {
+    ParseFn expr;
+    ParseFn sExpr;
+}   ParseRule;
+
+static ParseRule getRule(TokenType type);
 
 // Single instance parser and chunks.
 // - replace these as args passed to functions in order to support concurrent
@@ -162,18 +167,6 @@ static void endCompiler() {
 #endif
 }
 
-static void parse() {
-    advance();
-    ParseFn rule = *getRule(parser.previous.type);
-
-    if (rule == NULL) {
-        error("Expect expression.");
-        return;
-    }
-
-    rule();
-}
-
 static void number() {
     double value = strtod(parser.previous.start, NULL);
     emitConstant(NUMBER_VAL(value));
@@ -203,195 +196,181 @@ static int compileArgs() {
     return operandCount;
 }
 
-// is this needed?
+static void add() {
+    int operandCount = compileArgs();
+
+    if (operandCount < 0) {
+        return;
+    }
+
+    advance();
+    switch (operandCount) {
+        case 0:
+            emitConstant(NUMBER_VAL(0));
+            break;
+        case 1:
+            break;
+        default:
+            emitBytes(OP_ADD, operandCount);
+    }
+}
+
+static void multiply() {
+    int operandCount = compileArgs();
+
+    if (operandCount < 0) {
+        return;
+    }
+    advance();
+
+    switch (operandCount) {
+        case 0:
+            emitConstant(NUMBER_VAL(1));
+            break;
+        case 1:
+            break;
+        default:
+            emitBytes(OP_MULTIPLY, operandCount);
+    }
+}
+
+static void subtract() {
+    int operandCount = compileArgs();
+
+    if (operandCount < 0) {
+        return;
+    }
+    advance();
+
+    switch (operandCount) {
+        case 0:
+            error("attemped to call - with no arguments");
+            return;
+        case 1:
+            emitByte(OP_NEGATE);
+            break;
+        default:
+            emitBytes(OP_SUBTRACT, operandCount);
+    }
+}
+
+static void divide() {
+    int operandCount = compileArgs();
+
+    if (operandCount < 0) {
+        return;
+    }
+    advance();
+
+    if (operandCount == 0) {
+        error("attemped to call / with no arguments");
+        return;
+    }
+    emitBytes(OP_DIVIDE, operandCount);
+}
+
+static void not() {
+    int operandCount = compileArgs();
+
+    if (operandCount < 0) {
+        return;
+    }
+    advance();
+
+    switch (operandCount) {
+        case 0:
+            error("attemped to call not with no arguments");
+            return;
+        case 1:
+            emitByte(OP_NOT);
+            break;
+        default:
+            error("attemped to call not with too many arguments");
+            return;
+    }
+}
+
+static void equal() {
+    int operandCount = compileArgs();
+
+    if (operandCount < 0) {
+        return;
+    }
+    advance();
+
+    switch (operandCount) {
+        case 0:
+            emitByte(OP_TRUE);
+            break;
+        default:
+            emitBytes(OP_EQUAL, operandCount);
+    }
+}
+
+static void greater() {
+    int operandCount = compileArgs();
+
+    if (operandCount < 0) {
+        return;
+    }
+    advance();
+
+    switch (operandCount) {
+        case 0:
+            error("attempted to call > with 0 arguments");
+            return;
+        case 1:
+            emitByte(OP_TRUE);
+            break;
+        default:
+            emitBytes(OP_GREATER, operandCount);
+    }
+}
+
+static void less() {
+    int operandCount = compileArgs();
+
+    if (operandCount < 0) {
+        return;
+    }
+    advance();
+
+    switch (operandCount) {
+        case 0:
+            error("attempted to call < with 0 arguments");
+            return;
+        case 1:
+            emitByte(OP_TRUE);
+            break;
+        default:
+            emitBytes(OP_LESS, operandCount);
+    }
+}
+
+static void strcmd() {
+    int operandCount = compileArgs();
+
+    if (operandCount < 0) {
+        return;
+    }
+    advance();
+
+    emitBytes(OP_STR, operandCount);
+}
+
 static void sExpression() {
     advance();
 
     TokenType operatorType = parser.previous.type;
-    int operandCount = 0;
 
-    switch (operatorType) {
-        case TOKEN_PLUS: {
-            operandCount = compileArgs();
+    ParseFn fn = *getRule(operatorType).sExpr;
 
-            if (operandCount < 0) {
-                return;
-            }
-            advance();
-
-            switch (operandCount) {
-                case 0:
-                    emitConstant(NUMBER_VAL(0));
-                    break;
-                case 1:
-                    break;
-                default:
-                    emitBytes(OP_ADD, operandCount);
-            }
-            break;
-        }
-        case TOKEN_STAR: {
-            operandCount = compileArgs();
-
-            if (operandCount < 0) {
-                return;
-            }
-            advance();
-
-            switch (operandCount) {
-                case 0:
-                    emitConstant(NUMBER_VAL(1));
-                    break;
-                case 1:
-                    break;
-                default:
-                    emitBytes(OP_MULTIPLY, operandCount);
-            }
-            break;
-        }
-        case TOKEN_MINUS: {
-            operandCount = compileArgs();
-
-            if (operandCount < 0) {
-                return;
-            }
-            advance();
-
-            switch (operandCount) {
-                case 0:
-                    error("attemped to call - with no arguments");
-                    return;
-                case 1:
-                    emitByte(OP_NEGATE);
-                    break;
-                default:
-                    emitBytes(OP_SUBTRACT, operandCount);
-            }
-            break;
-        }
-        case TOKEN_SLASH: {
-            operandCount = compileArgs();
-
-            if (operandCount < 0) {
-                return;
-            }
-            advance();
-
-            if (operandCount == 0) {
-                error("attemped to call / with no arguments");
-                return;
-            }
-            emitBytes(OP_DIVIDE, operandCount);
-            break;
-        }
-        case TOKEN_NOT: {
-            operandCount = compileArgs();
-
-            if (operandCount < 0) {
-                return;
-            }
-            advance();
-
-            switch (operandCount) {
-                case 0:
-                    error("attemped to call not with no arguments");
-                    return;
-                case 1:
-                    emitByte(OP_NOT);
-                    break;
-                default:
-                    error("attemped to call not with too many arguments");
-                    return;
-            }
-            break;
-        }
-        case TOKEN_EQUAL: {
-            operandCount = compileArgs();
-
-            if (operandCount < 0) {
-                return;
-            }
-            advance();
-
-            switch (operandCount) {
-                case 0:
-                    emitByte(OP_TRUE);
-                    break;
-                default:
-                    emitBytes(OP_EQUAL, operandCount);
-            }
-            break;
-        }
-        case TOKEN_GREATER: {
-            operandCount = compileArgs();
-
-            if (operandCount < 0) {
-                return;
-            }
-            advance();
-
-            switch (operandCount) {
-                case 0:
-                    error("attempted to call > with 0 arguments");
-                    return;
-                case 1:
-                    emitByte(OP_TRUE);
-                    break;
-                default:
-                    emitBytes(OP_GREATER, operandCount);
-            }
-            break;
-        }
-        case TOKEN_LESS: {
-            operandCount = compileArgs();
-
-            if (operandCount < 0) {
-                return;
-            }
-            advance();
-
-            switch (operandCount) {
-                case 0:
-                    error("attempted to call < with 0 arguments");
-                    return;
-                case 1:
-                    emitByte(OP_TRUE);
-                    break;
-                default:
-                    emitBytes(OP_LESS, operandCount);
-            }
-            break;
-        }
-        case TOKEN_STR_CMD: {
-            operandCount = compileArgs();
-
-            if (operandCount < 0) {
-                return;
-            }
-            advance();
-
-            emitBytes(OP_STR, operandCount);
-        }
-        // TODO: function calls and builtins
-        default: return; // unreachable
+    if (fn == NULL) {
+        error("Invalid first arg in s-expression.");
+        return;
     }
-}
 
-// Parse function for parsing expressions identified by their leading token.
-// Todo: refactor this in future to make more sense for lisp.
-static void unary() {
-    TokenType operatorType = parser.previous.type;
-
-    switch (operatorType) {
-        case TOKEN_MINUS: {
-                              // compile the operand
-                              parse();
-                              emitByte(OP_NEGATE); 
-                              break;
-                          }
-        case TOKEN_LEFT_PAREN: sExpression(); break;
-        default: return; // unreachable
-    }
+    fn();
 }
 
 // Compile the given token to the current form of literal value.
@@ -411,40 +390,56 @@ static void string() {
 
 // Currently only used to wrap parse. Remove in future if nothing changes.
 static void expression() {
-    parse();
+    advance();
+    ParseFn rule = *getRule(parser.previous.type).expr;
+
+    if (rule == NULL) {
+        error("Expect expression.");
+        return;
+    }
+
+    rule();
 }
 
-ParseFn rules[] = {
-    [TOKEN_LEFT_PAREN]      = sExpression,
-    [TOKEN_RIGHT_PAREN]     = NULL,
-    [TOKEN_LEFT_BRACE]      = NULL,
-    [TOKEN_RIGHT_BRACE]     = NULL,
-    [TOKEN_MINUS]           = unary,
-    [TOKEN_PLUS]            = NULL,
-    [TOKEN_SLASH]           = NULL,
-    [TOKEN_STAR]            = NULL,
-    [TOKEN_EQUAL]           = NULL,
-    [TOKEN_GREATER]         = NULL,
-    [TOKEN_LESS]            = NULL,
-    [TOKEN_IDENTIFIER]      = NULL,
-    [TOKEN_STRING]          = string,
-    [TOKEN_NUMBER]          = number,
-    [TOKEN_AND]             = NULL,
-    [TOKEN_FALSE]           = literal,
-    [TOKEN_FOR]             = NULL,
-    [TOKEN_DEF]             = NULL,
-    [TOKEN_IF]              = NULL,
-    [TOKEN_NULL]            = literal,
-    [TOKEN_OR]              = NULL,
-    [TOKEN_PRINT]           = NULL,
-    [TOKEN_TRUE]            = literal,
-    [TOKEN_WHILE]           = NULL,
-    [TOKEN_ERROR]           = NULL,
-    [TOKEN_EOF]             = NULL,
+static void negate() {
+    expression();
+    emitByte(OP_NEGATE);
+}
+
+ParseRule rules[] = {
+    [TOKEN_LEFT_PAREN]      = { sExpression, NULL },
+    [TOKEN_RIGHT_PAREN]     = { NULL, NULL },
+    [TOKEN_LEFT_BRACE]      = { NULL, NULL },
+    [TOKEN_RIGHT_BRACE]     = { NULL, NULL },
+    [TOKEN_MINUS]           = { negate, subtract },
+    [TOKEN_PLUS]            = { NULL, add },
+    [TOKEN_SLASH]           = { NULL, divide },
+    [TOKEN_STAR]            = { NULL, multiply },
+    [TOKEN_EQUAL]           = { NULL, equal },
+    [TOKEN_GREATER]         = { NULL, greater },
+    [TOKEN_LESS]            = { NULL, less },
+    [TOKEN_IDENTIFIER]      = { NULL, NULL },
+    [TOKEN_STRING]          = { string, NULL },
+    [TOKEN_NUMBER]          = { number, NULL },
+    [TOKEN_AND]             = { NULL, NULL },
+    [TOKEN_DEF]             = { NULL, NULL },
+    [TOKEN_FALSE]           = { literal, NULL },
+    [TOKEN_FOR]             = { NULL, NULL },
+    [TOKEN_IF]              = { NULL, NULL },
+    [TOKEN_LAMBDA]          = { NULL, NULL },
+    [TOKEN_NOT]             = { NULL, not },
+    [TOKEN_NULL]            = { literal, NULL },
+    [TOKEN_OR]              = { NULL, NULL },
+    [TOKEN_PRINT]           = { NULL, NULL },
+    [TOKEN_STR_CMD]         = { NULL, strcmd },
+    [TOKEN_TRUE]            = { literal, NULL },
+    [TOKEN_WHILE]           = { NULL, NULL },
+    [TOKEN_ERROR]           = { NULL, NULL },
+    [TOKEN_EOF]             = { NULL, NULL },
 };
 
 // Return the correct fule from the rules array.
-static ParseFn getRule(TokenType type) {
+static ParseRule getRule(TokenType type) {
     return rules[type];
 }
 
