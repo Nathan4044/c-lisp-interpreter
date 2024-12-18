@@ -358,6 +358,17 @@ static void strcmd() {
     emitBytes(OP_STR, operandCount);
 }
 
+static void print() {
+    int operandCount = compileArgs();
+
+    if (operandCount < 0) {
+        return;
+    }
+    advance();
+
+    emitBytes(OP_PRINT, operandCount);
+}
+
 static void sExpression() {
     advance();
 
@@ -430,7 +441,7 @@ ParseRule rules[] = {
     [TOKEN_NOT]             = { NULL, not },
     [TOKEN_NULL]            = { literal, NULL },
     [TOKEN_OR]              = { NULL, NULL },
-    [TOKEN_PRINT]           = { NULL, NULL },
+    [TOKEN_PRINT]           = { NULL, print },
     [TOKEN_STR_CMD]         = { NULL, strcmd },
     [TOKEN_TRUE]            = { literal, NULL },
     [TOKEN_WHILE]           = { NULL, NULL },

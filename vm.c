@@ -292,6 +292,19 @@ static void strCat(uint8_t count) {
     push(OBJ_VAL(s));
 }
 
+static void printVals(uint8_t count) {
+    for (int i = 0; i < count; i++) {
+        Value v = peek(count-i-1);
+        printValue(v);
+
+        if (i < count - 1) printf(" ");
+    }
+    printf("\n");
+
+    popMultiple(count);
+    push(NULL_VAL);
+}
+
 // The run function is the main part of the interpreter.
 //
 // It consists of a central loop that continually reads through and executes
@@ -372,6 +385,9 @@ static InterpretResult run() {
                 break;
             case OP_POP:
                 pop();
+                break;
+            case OP_PRINT:
+                printVals(READ_BYTE());
                 break;
             case OP_RETURN: 
                 printValue(pop());
