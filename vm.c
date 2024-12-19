@@ -39,11 +39,13 @@ void initVM() {
     resetStack();
     vm.objects = NULL;
     initTable(&vm.strings);
+    initTable(&vm.globals);
 }
 
 void freeVM() {
     freeObjects();
     freeTable(&vm.strings);
+    freeTable(&vm.globals);
 }
 
 // Add a new Value to the top of the VM's value stack.
@@ -316,7 +318,9 @@ static void printVals(uint8_t count) {
 static InterpretResult run() {
 #define READ_BYTE() (*vm.ip++)
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
+#define READ_STRING() AS_STRING(READ_CONSTANT())
 
+    ObjString* temp;
     for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
         printf("        ");
@@ -386,6 +390,29 @@ static InterpretResult run() {
             case OP_POP:
                 pop();
                 break;
+            case OP_DEFINE_GLOBAL: {
+                ObjString* name = READ_STRING();
+                temp = name;
+                printf("---> defining variable '%.*s' as ", name->length, name->chars);
+                printValue(peek(0));
+                printf("\n");
+                tableSet(&vm.globals, name, peek(0));
+                break;
+            }
+            case OP_GET_GLOBAL: {
+                ObjString* name = READ_STRING();
+                printf("---> retrieving variable '%.*s'\n", name->length, name->chars);
+
+                Value value;
+
+                if (!tableGet(&vm.globals, name, &value)) {
+                    runtimeError("Undefined variable '%s'.", name->chars);
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                push(value);
+                break;
+            }
             case OP_PRINT:
                 printVals(READ_BYTE());
                 break;
@@ -396,6 +423,7 @@ static InterpretResult run() {
         }
     }
 
+#undef READ_STRING
 #undef READ_CONSTANT
 #undef READ_BYTE
 }

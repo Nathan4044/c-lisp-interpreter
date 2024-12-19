@@ -370,6 +370,19 @@ static void print() {
     emitBytes(OP_PRINT, operandCount);
 }
 
+static uint8_t identifierConstant(Token* name) {
+    return makeConstant(OBJ_VAL(copyString(name->start, name->length)));
+}
+
+static void namedVariable(Token name) {
+    uint8_t arg = identifierConstant(&name);
+    emitBytes(OP_GET_GLOBAL, arg);
+}
+
+static void variable() {
+    namedVariable(parser.previous);
+}
+
 static void synchronize() {
     parser.panicMode = false;
 
@@ -437,6 +450,24 @@ static void expression() {
     if (parser.panicMode) synchronize();
 }
 
+static uint8_t parseVariable(const char* errorMessage) {
+    consume(TOKEN_IDENTIFIER, errorMessage);
+    return identifierConstant(&parser.previous);
+}
+
+static void defineVariable(uint8_t global) {
+    emitBytes(OP_DEFINE_GLOBAL, global);
+}
+
+static void def() {
+    uint8_t global = parseVariable("Expect variable name.");
+
+    expression();
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' at end of def expression.");
+
+    defineVariable(global);
+}
+
 static void negate() {
     expression();
     emitByte(OP_NEGATE);
@@ -454,11 +485,11 @@ ParseRule rules[] = {
     [TOKEN_EQUAL]           = { NULL, equal },
     [TOKEN_GREATER]         = { NULL, greater },
     [TOKEN_LESS]            = { NULL, less },
-    [TOKEN_IDENTIFIER]      = { NULL, NULL },
+    [TOKEN_IDENTIFIER]      = { variable, NULL }, // user defined function calls will replace NULL here
     [TOKEN_STRING]          = { string, NULL },
     [TOKEN_NUMBER]          = { number, NULL },
     [TOKEN_AND]             = { NULL, NULL },
-    [TOKEN_DEF]             = { NULL, NULL },
+    [TOKEN_DEF]             = { NULL, def },
     [TOKEN_FALSE]           = { literal, NULL },
     [TOKEN_FOR]             = { NULL, NULL },
     [TOKEN_IF]              = { NULL, NULL },

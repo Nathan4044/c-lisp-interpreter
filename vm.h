@@ -15,6 +15,7 @@ typedef struct {
     uint8_t* ip; // The instruction pointer, pointing to the next byte to read.
     Value stack[STACK_MAX];
     Value* stackTop;
+    Table globals;
     Table strings;
     Obj* objects;
 } VM;
