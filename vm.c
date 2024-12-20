@@ -393,16 +393,11 @@ static InterpretResult run() {
             case OP_DEFINE_GLOBAL: {
                 ObjString* name = READ_STRING();
                 temp = name;
-                printf("---> defining variable '%.*s' as ", name->length, name->chars);
-                printValue(peek(0));
-                printf("\n");
                 tableSet(&vm.globals, name, peek(0));
                 break;
             }
             case OP_GET_GLOBAL: {
                 ObjString* name = READ_STRING();
-                printf("---> retrieving variable '%.*s'\n", name->length, name->chars);
-
                 Value value;
 
                 if (!tableGet(&vm.globals, name, &value)) {
@@ -411,6 +406,17 @@ static InterpretResult run() {
                 }
 
                 push(value);
+                break;
+            }
+            case OP_DEFINE_LOCAL: {
+                uint8_t slot = READ_BYTE();
+                vm.stack[slot] = peek(0);
+                push(peek(0));
+                break;
+            }
+            case OP_GET_LOCAL: {
+                uint8_t slot = READ_BYTE();
+                push(vm.stack[slot]);
                 break;
             }
             case OP_PRINT:

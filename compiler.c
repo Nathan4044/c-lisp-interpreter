@@ -2,8 +2,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "chunk.h"
+#include "common.h"
 #include "compiler.h"
 #include "object.h"
 #include "scanner.h"
@@ -38,10 +40,22 @@ typedef struct {
 
 static ParseRule getRule(TokenType type);
 
+typedef struct {
+    Token name;
+    int depth;
+} Local;
+
+typedef struct {
+    Local locals[UINT8_COUNT];
+    int localCount;
+    int scopeDepth;
+} Compiler;
+
 // Single instance parser and chunks.
 // - replace these as args passed to functions in order to support concurrent
 //   parser usage for embedding.
 Parser parser;
+Compiler* current = NULL;
 Chunk* compilingChunk;
 
 // Should be useful later, when compiling separate chunks for each function.
@@ -157,6 +171,12 @@ static void emitConstant(Value value) {
     emitBytes(OP_CONSTANT, makeConstant(value));
 }
 
+static void initCompiler(Compiler* compiler) {
+    compiler->localCount = 0;
+    compiler->scopeDepth = 0;
+    current = compiler;
+}
+
 // Currently used for debug purposes and emitting a final return, to be updated
 // in the future.
 static void endCompiler() {
@@ -166,6 +186,20 @@ static void endCompiler() {
         disassembleChunk(currentChunk(), "code");
     }
 #endif
+}
+
+static void beginScope() {
+    current->scopeDepth++;
+}
+
+static void endScope() {
+    current->scopeDepth--;
+
+    while (current->localCount > 0 &&
+            current->locals[current->localCount - 1].depth > current->scopeDepth) {
+        emitByte(OP_POP);
+        current->localCount--;
+    }
 }
 
 static void number() {
@@ -370,13 +404,48 @@ static void print() {
     emitBytes(OP_PRINT, operandCount);
 }
 
+static void lambda() {
+    beginScope();
+    while (!check(TOKEN_RIGHT_PAREN) && !check(TOKEN_EOF)) {
+        expression();
+        emitByte(OP_POP);
+    }
+
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' at end of lambda.");
+    endScope();
+    emitByte(OP_NULL);
+}
+
 static uint8_t identifierConstant(Token* name) {
     return makeConstant(OBJ_VAL(copyString(name->start, name->length)));
 }
 
+static bool identifiersEqual(Token* a, Token* b) {
+    if (a->length != b->length) return false;
+    return memcmp(a->start, b->start, a->length) == 0;
+}
+
+static int resolveLocal(Compiler* compiler, Token* name) {
+    for (int i = compiler->localCount - 1; i >= 0; i--) {
+        Local* local = &compiler->locals[i];
+        if (identifiersEqual(name, &local->name)) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
 static void namedVariable(Token name) {
-    uint8_t arg = identifierConstant(&name);
-    emitBytes(OP_GET_GLOBAL, arg);
+    uint8_t getOp = OP_GET_LOCAL;
+    int arg = resolveLocal(current, &name);
+
+    if (arg == -1) {
+        arg = identifierConstant(&name);
+        getOp = OP_GET_GLOBAL;
+    }
+
+    emitBytes(getOp, arg);
 }
 
 static void variable() {
@@ -450,22 +519,65 @@ static void expression() {
     if (parser.panicMode) synchronize();
 }
 
-static uint8_t parseVariable(const char* errorMessage) {
-    consume(TOKEN_IDENTIFIER, errorMessage);
-    return identifierConstant(&parser.previous);
+static int addLocal(Token name) {
+    if (current->localCount == UINT8_COUNT) {
+        error("Too many local variables in function.");
+        return -1;
+    }
+
+    Local* local = &current->locals[current->localCount++];
+    local->name = name;
+    local->depth = current->scopeDepth;
+    return current->localCount - 1;
 }
 
-static void defineVariable(uint8_t global) {
-    emitBytes(OP_DEFINE_GLOBAL, global);
+static int declareVariable() {
+    if (current->scopeDepth == 0) return -1;
+
+    Token* name = &parser.previous;
+
+    for (int i = current->localCount - 1; i >= 0; i--) {
+        Local* local = &current->locals[i];
+
+        if (local->depth != -1 && local->depth < current->scopeDepth) {
+            break;
+        }
+
+        if (identifiersEqual(name, &local->name)) {
+            return i;
+        }
+    }
+
+    return addLocal(*name);
+}
+
+static uint8_t parseVariable(const char* errorMessage) {
+    consume(TOKEN_IDENTIFIER, errorMessage);
+
+    int index = declareVariable();
+    if (index == -1) {
+        return identifierConstant(&parser.previous);
+    } else {
+        return index;
+    }
+}
+
+static void defineVariable(uint8_t index) {
+    uint8_t setOp = OP_DEFINE_LOCAL;
+    if (current->scopeDepth == 0) {
+        setOp = OP_DEFINE_GLOBAL;
+    }
+
+    emitBytes(setOp, index);
 }
 
 static void def() {
-    uint8_t global = parseVariable("Expect variable name.");
+    uint8_t index = parseVariable("Expect variable name.");
 
     expression();
     consume(TOKEN_RIGHT_PAREN, "Expect ')' at end of def expression.");
 
-    defineVariable(global);
+    defineVariable(index);
 }
 
 static void negate() {
@@ -493,7 +605,7 @@ ParseRule rules[] = {
     [TOKEN_FALSE]           = { literal, NULL },
     [TOKEN_FOR]             = { NULL, NULL },
     [TOKEN_IF]              = { NULL, NULL },
-    [TOKEN_LAMBDA]          = { NULL, NULL },
+    [TOKEN_LAMBDA]          = { NULL, lambda },
     [TOKEN_NOT]             = { NULL, not },
     [TOKEN_NULL]            = { literal, NULL },
     [TOKEN_OR]              = { NULL, NULL },
@@ -514,6 +626,8 @@ static ParseRule getRule(TokenType type) {
 // into a chunk.
 bool compile(const char* source, Chunk* chunk) {
     initScanner(source);
+    Compiler compiler;
+    initCompiler(&compiler);
     compilingChunk = chunk;
 
     parser.hadError = false;
