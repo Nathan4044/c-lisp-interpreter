@@ -28,6 +28,8 @@ typedef enum {
     OP_GET_GLOBAL,
     OP_DEFINE_LOCAL,
     OP_GET_LOCAL,
+    OP_JUMP_FALSE,
+    OP_JUMP,
 } OpCode;
 
 // A chunk is a container for constants and bytecode instructions.

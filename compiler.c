@@ -148,6 +148,27 @@ static void emitPop() {
     emitByte(OP_POP);
 }
 
+static int emitJump(uint8_t instruction) {
+    emitByte(instruction);
+    emitByte(0xff);
+    emitByte(0xff);
+    return currentChunk()->count - 2;
+}
+
+static void patchJump(int offset) {
+    // -2 to get before the jump offset operand
+    int jump = currentChunk()->count - offset - 2;
+
+    if (jump > UINT16_MAX) {
+        error("Too much code to jump over.");
+    }
+
+    // bit manipulation to replace the two 8 bit numbers with a 16 bit number.
+    // 8 bits at a time, only keep the bytes that are set to 1.
+    currentChunk()->code[offset] = (jump >> 8) & 0xff;
+    currentChunk()->code[offset+1] = jump & 0xff;
+}
+
 // Add the provided value as a constant to the current chunk, returning its
 // index in the constant pool.
 //
@@ -416,6 +437,28 @@ static void lambda() {
     emitByte(OP_NULL);
 }
 
+static void ifExpr() {
+    expression();
+
+    int thenJump = emitJump(OP_JUMP_FALSE);
+
+    emitPop();
+    expression();
+
+    int elseJump = emitJump(OP_JUMP);
+    patchJump(thenJump);
+
+    emitPop();
+    if (match(TOKEN_RIGHT_PAREN)) {
+        emitByte(OP_NULL);
+    } else {
+        expression();
+        consume(TOKEN_RIGHT_PAREN, "Expect ')' at end of if expression.");
+    }
+
+    patchJump(elseJump);
+}
+
 static uint8_t identifierConstant(Token* name) {
     return makeConstant(OBJ_VAL(copyString(name->start, name->length)));
 }
@@ -604,7 +647,7 @@ ParseRule rules[] = {
     [TOKEN_DEF]             = { NULL, def },
     [TOKEN_FALSE]           = { literal, NULL },
     [TOKEN_FOR]             = { NULL, NULL },
-    [TOKEN_IF]              = { NULL, NULL },
+    [TOKEN_IF]              = { NULL, ifExpr },
     [TOKEN_LAMBDA]          = { NULL, lambda },
     [TOKEN_NOT]             = { NULL, not },
     [TOKEN_NULL]            = { literal, NULL },

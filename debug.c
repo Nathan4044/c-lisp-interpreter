@@ -43,6 +43,15 @@ static int rangeInstruction(const char* name, Chunk* chunk, int offset) {
     return offset + 2;
 }
 
+static int jumpInstruction(const char* name, int sign, Chunk* chunk, int offset) {
+    uint16_t jump = (uint16_t)(chunk->code[offset + 1] << 8);
+    jump |= chunk->code[offset + 2];
+
+    printf("%-16s %4d\n", name, offset + 3 + sign * jump);
+
+    return offset + 3;
+}
+
 // disassembleInstruction prints the instruction at the provided offset.
 // It dispatches to the correct printing function depending on the instruction.
 int disassembleInstruction(Chunk *chunk, int offset) {
@@ -100,6 +109,10 @@ int disassembleInstruction(Chunk *chunk, int offset) {
             return byteInstruction("OP_DEFINE_LOCAL", chunk, offset);
         case OP_GET_LOCAL:
             return byteInstruction("OP_GET_LOCAL", chunk, offset);
+        case OP_JUMP_FALSE:
+            return jumpInstruction("OP_JUMP_FALSE", 1, chunk, offset);
+        case OP_JUMP:
+            return jumpInstruction("OP_JUMP", 1, chunk, offset);
         default:
             printf("Unknown opcode %d\n", instruction);
             return offset + 1;
