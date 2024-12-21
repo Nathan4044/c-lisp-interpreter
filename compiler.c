@@ -144,10 +144,6 @@ static void emitReturn() {
     overwriteLast(currentChunk(), OP_RETURN);
 }
 
-static void emitPop() {
-    emitByte(OP_POP);
-}
-
 static int emitJump(uint8_t instruction) {
     emitByte(instruction);
     emitByte(0xff);
@@ -167,6 +163,19 @@ static void patchJump(int offset) {
     // 8 bits at a time, only keep the bytes that are set to 1.
     currentChunk()->code[offset] = (jump >> 8) & 0xff;
     currentChunk()->code[offset+1] = jump & 0xff;
+}
+
+static void emitLoop(int loopStart) {
+    emitByte(OP_LOOP);
+
+    int offset = currentChunk()->count - loopStart + 2;
+
+    if (offset > UINT16_MAX) {
+        error("Loop body too large.");
+    }
+
+    emitByte((offset >> 8) & 0xff);
+    emitByte(offset & 0xff);
 }
 
 // Add the provided value as a constant to the current chunk, returning its
@@ -438,13 +447,13 @@ static void ifExpr() {
 
     int thenJump = emitJump(OP_JUMP_FALSE);
 
-    emitPop();
+    emitByte(OP_POP);
     expression();
 
     int elseJump = emitJump(OP_JUMP);
     patchJump(thenJump);
 
-    emitPop();
+    emitByte(OP_POP);
     if (match(TOKEN_RIGHT_PAREN)) {
         emitByte(OP_NULL);
     } else {
@@ -528,6 +537,25 @@ static void or_() {
     advance();
 
     return;
+}
+
+static void while_() {
+    int loopStart = currentChunk()->count;
+    expression();
+
+    int endJump = emitJump(OP_JUMP_FALSE);
+    emitByte(OP_POP);
+
+    while (parser.current.type != TOKEN_RIGHT_PAREN) {
+        expression();
+        emitByte(OP_POP);
+    }
+
+    emitLoop(loopStart);
+    patchJump(endJump);
+    emitByte(OP_POP);
+    emitByte(OP_NULL);
+    advance();
 }
 
 static uint8_t identifierConstant(Token* name) {
@@ -726,7 +754,7 @@ ParseRule rules[] = {
     [TOKEN_PRINT]           = { NULL, print },
     [TOKEN_STR_CMD]         = { NULL, strcmd },
     [TOKEN_TRUE]            = { literal, NULL },
-    [TOKEN_WHILE]           = { NULL, NULL },
+    [TOKEN_WHILE]           = { NULL, while_ },
     [TOKEN_ERROR]           = { NULL, NULL },
     [TOKEN_EOF]             = { NULL, NULL },
 };
@@ -751,7 +779,7 @@ bool compile(const char* source, Chunk* chunk) {
     advance();
     while (!match(TOKEN_EOF)) {
         expression();
-        emitPop(); // Rewritten by endCompiler() to OP_RETURN on last expression.
+        emitByte(OP_POP); // Rewritten by endCompiler() to OP_RETURN on last expression.
     }
 
     endCompiler();

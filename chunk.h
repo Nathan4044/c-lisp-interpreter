@@ -30,6 +30,7 @@ typedef enum {
     OP_GET_LOCAL,
     OP_JUMP_FALSE,
     OP_JUMP,
+    OP_LOOP,
 } OpCode;
 
 // A chunk is a container for constants and bytecode instructions.
