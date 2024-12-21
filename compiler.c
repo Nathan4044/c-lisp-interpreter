@@ -230,11 +230,7 @@ static void number() {
 
 static int compileArgs() {
     int operandCount = 0;
-    for (;;) {
-        if (parser.current.type == TOKEN_RIGHT_PAREN) {
-            break;
-        }
-
+    while (parser.current.type != TOKEN_RIGHT_PAREN) {
         if (parser.current.type == TOKEN_EOF) {
             error("Unexpected end of file");
             return -1;
@@ -459,6 +455,81 @@ static void ifExpr() {
     patchJump(elseJump);
 }
 
+static void and_() {
+    int operandCount = 0;
+    int jumps[UINT8_MAX];
+
+    while (parser.current.type != TOKEN_RIGHT_PAREN) {
+        if (parser.current.type == TOKEN_EOF) {
+            error("Unexpected end of file");
+            return;
+        }
+
+        if (operandCount > UINT8_MAX) {
+            error("Too many arguments in s-expression.");
+            return;
+        }
+
+        expression();
+
+        int jump = emitJump(OP_JUMP_FALSE);
+        jumps[operandCount++] = jump;
+        emitByte(OP_POP);
+    }
+
+    currentChunk()->count--;
+
+    for (int i = 0; i < operandCount; i++) {
+        patchJump(jumps[i]);
+    }
+
+    if (operandCount == 0) {
+        emitByte(OP_TRUE);
+    }
+    advance();
+
+    return;
+}
+
+static void or_() {
+    int operandCount = 0;
+    int jumps[UINT8_MAX];
+
+    while (parser.current.type != TOKEN_RIGHT_PAREN) {
+        if (parser.current.type == TOKEN_EOF) {
+            error("Unexpected end of file");
+            return;
+        }
+
+        if (operandCount > UINT8_MAX) {
+            error("Too many arguments in s-expression.");
+            return;
+        }
+
+        expression();
+
+        int jumpFalse = emitJump(OP_JUMP_FALSE);
+        int jump = emitJump(OP_JUMP);
+        jumps[operandCount++] = jump;
+
+        patchJump(jumpFalse);
+        emitByte(OP_POP);
+    }
+
+    currentChunk()->count--;
+
+    for (int i = 0; i < operandCount; i++) {
+        patchJump(jumps[i]);
+    }
+
+    if (operandCount == 0) {
+        emitByte(OP_FALSE);
+    }
+    advance();
+
+    return;
+}
+
 static uint8_t identifierConstant(Token* name) {
     return makeConstant(OBJ_VAL(copyString(name->start, name->length)));
 }
@@ -643,7 +714,7 @@ ParseRule rules[] = {
     [TOKEN_IDENTIFIER]      = { variable, NULL }, // user defined function calls will replace NULL here
     [TOKEN_STRING]          = { string, NULL },
     [TOKEN_NUMBER]          = { number, NULL },
-    [TOKEN_AND]             = { NULL, NULL },
+    [TOKEN_AND]             = { NULL, and_ },
     [TOKEN_DEF]             = { NULL, def },
     [TOKEN_FALSE]           = { literal, NULL },
     [TOKEN_FOR]             = { NULL, NULL },
@@ -651,7 +722,7 @@ ParseRule rules[] = {
     [TOKEN_LAMBDA]          = { NULL, lambda },
     [TOKEN_NOT]             = { NULL, not },
     [TOKEN_NULL]            = { literal, NULL },
-    [TOKEN_OR]              = { NULL, NULL },
+    [TOKEN_OR]              = { NULL, or_ },
     [TOKEN_PRINT]           = { NULL, print },
     [TOKEN_STR_CMD]         = { NULL, strcmd },
     [TOKEN_TRUE]            = { literal, NULL },
