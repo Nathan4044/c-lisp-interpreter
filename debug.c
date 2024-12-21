@@ -11,6 +11,8 @@ void disassembleChunk(Chunk *chunk, const char *name) {
     for (int offset = 0; offset < chunk->count;) {
         offset = disassembleInstruction(chunk, offset);
     }
+
+    printf("\n");
 }
 
 // Prints a representation of a single byte instruction.
@@ -115,6 +117,8 @@ int disassembleInstruction(Chunk *chunk, int offset) {
             return jumpInstruction("OP_JUMP", 1, chunk, offset);
         case OP_LOOP:
             return jumpInstruction("OP_LOOP", -1, chunk, offset);
+        case OP_CALL:
+            return byteInstruction("OP_CALL", chunk, offset);
         default:
             printf("Unknown opcode %d\n", instruction);
             return offset + 1;

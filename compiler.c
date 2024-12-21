@@ -45,7 +45,16 @@ typedef struct {
     int depth;
 } Local;
 
-typedef struct {
+typedef enum {
+    TYPE_FUNCTION,
+    TYPE_SCRIPT,
+} FunctionType;
+
+typedef struct Compiler {
+    struct Compiler* enclosing;
+    ObjFunction* function;
+    FunctionType type;
+
     Local locals[UINT8_COUNT];
     int localCount;
     int scopeDepth;
@@ -60,7 +69,7 @@ Chunk* compilingChunk;
 
 // Should be useful later, when compiling separate chunks for each function.
 static Chunk* currentChunk() {
-    return compilingChunk;
+    return &current->function->chunk;
 }
 
 // Print a structured error message to stderr that lets the user know what the
@@ -201,21 +210,40 @@ static void emitConstant(Value value) {
     emitBytes(OP_CONSTANT, makeConstant(value));
 }
 
-static void initCompiler(Compiler* compiler) {
+static void initCompiler(Compiler* compiler, FunctionType type) {
+    compiler->enclosing = current;
+    compiler->function = NULL;
+    compiler->type = type;
     compiler->localCount = 0;
     compiler->scopeDepth = 0;
+    compiler->function = newFunction();
     current = compiler;
+
+    if (type != TYPE_SCRIPT) {
+        current->function->name = copyString("lambda", 6);
+    }
+
+    Local* local = &current->locals[current->localCount++];
+    local->depth = 0;
+    local->name.start = "";
+    local->name.length = 0;
 }
 
 // Currently used for debug purposes and emitting a final return, to be updated
 // in the future.
-static void endCompiler() {
+static ObjFunction* endCompiler() {
     emitReturn();
+    ObjFunction* function = current->function;
+
 #ifdef DEBUG_PRINT_CODE
     if (!parser.hadError) {
-        disassembleChunk(currentChunk(), "code");
+        disassembleChunk(currentChunk(), function->name != NULL ?
+                function->name->chars : "<script>");
     }
 #endif
+
+    current = current->enclosing;
+    return function;
 }
 
 static void beginScope() {
@@ -430,16 +458,32 @@ static void print() {
     emitBytes(OP_PRINT, operandCount);
 }
 
+static uint8_t parseVariable(const char* message);
+static void defineVariable(uint8_t index);
+
 static void lambda() {
+    Compiler compiler;
+    initCompiler(&compiler, TYPE_FUNCTION);
     beginScope();
-    while (!check(TOKEN_RIGHT_PAREN) && !check(TOKEN_EOF)) {
+
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after lambda keyword\n");
+
+    while (!match(TOKEN_RIGHT_PAREN)) {
+        current->function->arity++;
+        if (current->function->arity > 255) {
+            errorAtCurrent("Can't have more than 255 parameters\n");
+        }
+
+        uint8_t constant = parseVariable("Expect parameter name\n");
+    }
+
+    while (!match(TOKEN_RIGHT_PAREN)) {
         expression();
         emitByte(OP_POP);
     }
 
-    consume(TOKEN_RIGHT_PAREN, "Expect ')' at end of lambda.");
-    endScope();
-    emitByte(OP_NULL);
+    ObjFunction* function = endCompiler();
+    emitBytes(OP_CONSTANT, makeConstant(OBJ_VAL(function)));
 }
 
 static void ifExpr() {
@@ -558,6 +602,36 @@ static void while_() {
     advance();
 }
 
+static void call() {
+    // retrieve function
+    ParseFn rule = *getRule(parser.previous.type).expr;
+
+    if (rule == NULL) {
+        error("Expect expression.");
+        return;
+    }
+
+    rule();
+
+    uint8_t argCount = 0;
+    while (!match(TOKEN_RIGHT_PAREN)) {
+        if (check(TOKEN_EOF)) {
+            error("Unexpected end of file.");
+            return;
+        }
+
+        expression();
+
+        if (argCount == 255) {
+            error("Can't have more than 255 arguments.");
+        }
+
+        argCount++;
+    }
+    
+    emitBytes(OP_CALL, argCount);
+}
+
 static uint8_t identifierConstant(Token* name) {
     return makeConstant(OBJ_VAL(copyString(name->start, name->length)));
 }
@@ -623,7 +697,7 @@ static void sExpression() {
     ParseFn fn = *getRule(operatorType).sExpr;
 
     if (fn == NULL) {
-        error("Invalid first arg in s-expression.");
+        call();
         return;
     }
 
@@ -646,7 +720,6 @@ static void string() {
                     parser.previous.length-2)));
 }
 
-// Currently only used to wrap parse. Remove in future if nothing changes.
 static void expression() {
     advance();
     ParseFn rule = *getRule(parser.previous.type).expr;
@@ -719,6 +792,12 @@ static void def() {
     expression();
     consume(TOKEN_RIGHT_PAREN, "Expect ')' at end of def expression.");
 
+    Value* val = &currentChunk()->constants.values[currentChunk()->constants.count - 1];
+    if (IS_FUNCTION(*val)) {
+        ObjString* name = AS_STRING(currentChunk()->constants.values[index]);
+        AS_FUNCTION(*val)->name = name;
+    }
+
     defineVariable(index);
 }
 
@@ -739,7 +818,7 @@ ParseRule rules[] = {
     [TOKEN_EQUAL]           = { NULL, equal },
     [TOKEN_GREATER]         = { NULL, greater },
     [TOKEN_LESS]            = { NULL, less },
-    [TOKEN_IDENTIFIER]      = { variable, NULL }, // user defined function calls will replace NULL here
+    [TOKEN_IDENTIFIER]      = { variable, NULL },
     [TOKEN_STRING]          = { string, NULL },
     [TOKEN_NUMBER]          = { number, NULL },
     [TOKEN_AND]             = { NULL, and_ },
@@ -766,11 +845,10 @@ static ParseRule getRule(TokenType type) {
 
 // Compile takes a string of source code, scans the tokens, and compiles them
 // into a chunk.
-bool compile(const char* source, Chunk* chunk) {
+ObjFunction* compile(const char* source) {
     initScanner(source);
     Compiler compiler;
-    initCompiler(&compiler);
-    compilingChunk = chunk;
+    initCompiler(&compiler, TYPE_SCRIPT);
 
     parser.hadError = false;
     parser.panicMode = false;
@@ -782,6 +860,6 @@ bool compile(const char* source, Chunk* chunk) {
         emitByte(OP_POP); // Rewritten by endCompiler() to OP_RETURN on last expression.
     }
 
-    endCompiler();
-    return !parser.hadError;
+    ObjFunction* function = endCompiler();
+    return parser.hadError ? NULL : function;
 }
