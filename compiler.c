@@ -285,79 +285,6 @@ static int compileArgs() {
     return operandCount;
 }
 
-static void add() {
-    int operandCount = compileArgs();
-
-    if (operandCount < 0) {
-        return;
-    }
-
-    advance();
-    switch (operandCount) {
-        case 0:
-            emitConstant(NUMBER_VAL(0));
-            break;
-        case 1:
-            break;
-        default:
-            emitBytes(OP_ADD, operandCount);
-    }
-}
-
-static void multiply() {
-    int operandCount = compileArgs();
-
-    if (operandCount < 0) {
-        return;
-    }
-    advance();
-
-    switch (operandCount) {
-        case 0:
-            emitConstant(NUMBER_VAL(1));
-            break;
-        case 1:
-            break;
-        default:
-            emitBytes(OP_MULTIPLY, operandCount);
-    }
-}
-
-static void subtract() {
-    int operandCount = compileArgs();
-
-    if (operandCount < 0) {
-        return;
-    }
-    advance();
-
-    switch (operandCount) {
-        case 0:
-            error("attemped to call - with no arguments");
-            return;
-        case 1:
-            emitByte(OP_NEGATE);
-            break;
-        default:
-            emitBytes(OP_SUBTRACT, operandCount);
-    }
-}
-
-static void divide() {
-    int operandCount = compileArgs();
-
-    if (operandCount < 0) {
-        return;
-    }
-    advance();
-
-    if (operandCount == 0) {
-        error("attemped to call / with no arguments");
-        return;
-    }
-    emitBytes(OP_DIVIDE, operandCount);
-}
-
 static void not() {
     int operandCount = compileArgs();
 
@@ -377,85 +304,6 @@ static void not() {
             error("attemped to call not with too many arguments");
             return;
     }
-}
-
-static void equal() {
-    int operandCount = compileArgs();
-
-    if (operandCount < 0) {
-        return;
-    }
-    advance();
-
-    switch (operandCount) {
-        case 0:
-            emitByte(OP_TRUE);
-            break;
-        default:
-            emitBytes(OP_EQUAL, operandCount);
-    }
-}
-
-static void greater() {
-    int operandCount = compileArgs();
-
-    if (operandCount < 0) {
-        return;
-    }
-    advance();
-
-    switch (operandCount) {
-        case 0:
-            error("attempted to call > with 0 arguments");
-            return;
-        case 1:
-            emitByte(OP_TRUE);
-            break;
-        default:
-            emitBytes(OP_GREATER, operandCount);
-    }
-}
-
-static void less() {
-    int operandCount = compileArgs();
-
-    if (operandCount < 0) {
-        return;
-    }
-    advance();
-
-    switch (operandCount) {
-        case 0:
-            error("attempted to call < with 0 arguments");
-            return;
-        case 1:
-            emitByte(OP_TRUE);
-            break;
-        default:
-            emitBytes(OP_LESS, operandCount);
-    }
-}
-
-static void strcmd() {
-    int operandCount = compileArgs();
-
-    if (operandCount < 0) {
-        return;
-    }
-    advance();
-
-    emitBytes(OP_STR, operandCount);
-}
-
-static void print() {
-    int operandCount = compileArgs();
-
-    if (operandCount < 0) {
-        return;
-    }
-    advance();
-
-    emitBytes(OP_PRINT, operandCount);
 }
 
 static uint8_t parseVariable(const char* message);
@@ -801,23 +649,11 @@ static void def() {
     defineVariable(index);
 }
 
-static void negate() {
-    expression();
-    emitByte(OP_NEGATE);
-}
-
 ParseRule rules[] = {
     [TOKEN_LEFT_PAREN]      = { sExpression, NULL },
     [TOKEN_RIGHT_PAREN]     = { NULL, NULL },
     [TOKEN_LEFT_BRACE]      = { NULL, NULL },
     [TOKEN_RIGHT_BRACE]     = { NULL, NULL },
-    [TOKEN_MINUS]           = { negate, subtract },
-    [TOKEN_PLUS]            = { NULL, add },
-    [TOKEN_SLASH]           = { NULL, divide },
-    [TOKEN_STAR]            = { NULL, multiply },
-    [TOKEN_EQUAL]           = { NULL, equal },
-    [TOKEN_GREATER]         = { NULL, greater },
-    [TOKEN_LESS]            = { NULL, less },
     [TOKEN_IDENTIFIER]      = { variable, NULL },
     [TOKEN_STRING]          = { string, NULL },
     [TOKEN_NUMBER]          = { number, NULL },
@@ -830,8 +666,6 @@ ParseRule rules[] = {
     [TOKEN_NOT]             = { NULL, not },
     [TOKEN_NULL]            = { literal, NULL },
     [TOKEN_OR]              = { NULL, or_ },
-    [TOKEN_PRINT]           = { NULL, print },
-    [TOKEN_STR_CMD]         = { NULL, strcmd },
     [TOKEN_TRUE]            = { literal, NULL },
     [TOKEN_WHILE]           = { NULL, while_ },
     [TOKEN_ERROR]           = { NULL, NULL },

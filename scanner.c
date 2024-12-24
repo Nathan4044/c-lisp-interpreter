@@ -18,13 +18,6 @@ void initScanner(const char *source) {
     scanner.line = 1;
 }
 
-// is the given character a letter or underscore?
-static bool isAlpha(char c) {
-    return (c >= 'a' && c <= 'z') ||
-        (c >= 'A' && c <= 'Z') ||
-        c == '_';
-}
-
 // is the given character a digit?
 static bool isDigit(char c) {
     return c >= '0' && c <= '9';
@@ -50,6 +43,25 @@ static char peek() {
 static char peekNext() {
     if (isAtEnd()) return '\0';
     return scanner.current[1];
+}
+
+// is the given character a letter or underscore?
+static bool isValidIdentChar(char c) {
+    switch (c) {
+        case '(':
+        case ')':
+        case '{':
+        case '}':
+        case ' ':
+        case '\r':
+        case '\t':
+        case '\n':
+            return false;
+        case '/':
+            if (peekNext() == '/') return false;
+        default:
+            return true;
+    }
 }
 
 // If the next character to be consumed matches the given character, advance
@@ -150,8 +162,6 @@ static TokenType identifierType() {
                 }
             }
         case 'o': return checkKeyword(1, 1, "r", TOKEN_OR);
-        case 'p': return checkKeyword(1, 4, "rint", TOKEN_PRINT);
-        case 's': return checkKeyword(1, 2, "tr", TOKEN_STR_CMD);
         case 't': return checkKeyword(1, 3, "rue", TOKEN_TRUE);
         case 'w': return checkKeyword(1, 4, "hile", TOKEN_WHILE);
     }
@@ -164,7 +174,7 @@ static TokenType identifierType() {
 //
 // TODO: expand this later to match the original lisp implementation.
 static Token identifier() {
-    while (isAlpha(peek()) || isDigit(peek())) advance();
+    while (isValidIdentChar(peek()) || isDigit(peek())) advance();
     return makeToken(identifierType());
 }
 
@@ -204,7 +214,6 @@ Token scanToken() {
 
     char c = advance();
 
-    if (isAlpha(c)) return identifier();
     if (isDigit(c)) return number();
 
     switch (c) {
@@ -212,15 +221,10 @@ Token scanToken() {
         case ')': return makeToken(TOKEN_RIGHT_PAREN);
         case '{': return makeToken(TOKEN_LEFT_BRACE);
         case '}': return makeToken(TOKEN_RIGHT_BRACE);
-        case '-': return makeToken(TOKEN_MINUS);
-        case '+': return makeToken(TOKEN_PLUS);
-        case '*': return makeToken(TOKEN_STAR);
-        case '/': return makeToken(TOKEN_SLASH);
-        case '=': return makeToken(TOKEN_EQUAL);
-        case '<': return makeToken(TOKEN_LESS);
-        case '>': return makeToken(TOKEN_GREATER);
         case '"': return string();
     }
+
+    if (isValidIdentChar(c)) return identifier();
 
     return errorToken("Unexpected character.");
 }

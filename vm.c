@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "chunk.h"
 #include "common.h"
@@ -14,6 +15,320 @@
 #include "vm.h"
 
 VM vm;
+
+static Value peek(int n);
+static void runtimeError(const char* c, ...);
+
+static NativeResult clockNative(int argCount, Value* args) {
+    NativeResult result;
+
+    result.value = NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
+    result.success = true;
+
+    return result;
+}
+
+static NativeResult add(int argCount, Value* args) {
+    NativeResult result;
+    result.value = NULL_VAL;
+    result.success = false;
+
+    double total = 0;
+
+    for (int i = 0; i < argCount; i++) {
+        if (!IS_NUMBER(args[i])) {
+            runtimeError("Operand must be a number.");
+            return result;
+        }
+        total += AS_NUMBER(args[i]);
+    }
+
+    result.value = NUMBER_VAL(total);
+    result.success = true;
+    return result;
+}
+
+static NativeResult multiply(int argCount, Value* args) {
+    NativeResult result;
+    result.value = NULL_VAL;
+    result.success = false;
+
+    double total = 1;
+
+    for (int i = 0; i < argCount; i++) {
+        if (!IS_NUMBER(args[i])) {
+            runtimeError("Operand must be a number.");
+            return result;
+        }
+
+        total *= AS_NUMBER(args[i]);
+    }
+
+    result.value = NUMBER_VAL(total);
+    result.success = true;
+    return result;
+}
+
+static NativeResult subtract(int argCount, Value* args) {
+    NativeResult result;
+    result.value = NULL_VAL;
+    result.success = false;
+
+    switch (argCount) {
+        case 0:
+            runtimeError("Attempted to call '-' with no arguments.");
+            break;
+        case 1:
+            if (!IS_NUMBER(args[0])) {
+                runtimeError("Operand must be a number.");
+                break;
+            }
+            result.value = NUMBER_VAL(-(AS_NUMBER(args[0])));
+            result.success = true;
+        default: {
+            double sub = 0;
+
+            for (int i = 1; i < argCount; i++) {
+                if (!IS_NUMBER(args[i])) {
+                    runtimeError("Operand must be a number.");
+                    return result;
+                }
+
+                sub += AS_NUMBER(args[i]);
+            }
+
+            result.value = NUMBER_VAL(AS_NUMBER(args[0]) - sub);
+            result.success = true;
+        }
+    }
+
+    return result;
+}
+
+static NativeResult divide(int argCount, Value* args) {
+    NativeResult result;
+    result.value = NULL_VAL;
+    result.success = false;
+
+    switch (argCount) {
+        case 0:
+            runtimeError("Attempted to call '/' with no arguments.");
+            return result;
+        case 1:
+            if (!IS_NUMBER(args[0])) {
+                runtimeError("Operand must be a number.");
+                return result;
+            }
+            result.value = NUMBER_VAL(-(AS_NUMBER(args[0])));
+            result.success = true;
+            return result;
+        default: {
+            if (!IS_NUMBER(args[0])) {
+                runtimeError("Operand must be a number.");
+                return result;
+            }
+            double first = AS_NUMBER(args[0]);
+
+            for (int i = 1; i < argCount; i++) {
+                if (!IS_NUMBER(args[i])) {
+                    runtimeError("Operand must be a number.");
+                    return result;
+                }
+
+                double div = AS_NUMBER(args[i]);
+
+                if (div == 0) {
+                    runtimeError("Attemped divide by zero");
+                    return result;
+                }
+
+                first /= div;
+            }
+
+            result.value = NUMBER_VAL(first);
+            result.success = true;
+            return result;
+        }
+    }
+}
+
+static NativeResult greater(int argCount, Value* args) {
+    NativeResult result;
+    result.value = NULL_VAL;
+    result.success = false;
+
+    bool isGreater = true;
+
+    if (argCount == 0) {
+        runtimeError("Attempted to call '>' with no arguments.");
+        return result;
+    }
+
+    if (!IS_NUMBER(args[0])) {
+        runtimeError("Attempted '>' with non-number");
+        return result;
+    }
+
+    for (int i = 0; i < argCount - 1; i++) {
+        Value first = args[i];
+        Value second = args[i+1];
+
+        if (!IS_NUMBER(second)) {
+            runtimeError("Attempted '>' with non-number");
+            return result;
+        }
+
+        double firstNum = AS_NUMBER(first);
+        double secondNum = AS_NUMBER(second);
+
+        if (!(firstNum > secondNum)) {
+            isGreater = false;
+            break;
+        }
+    }
+
+    result.value = BOOL_VAL(isGreater);
+    result.success = true;
+    return result;
+}
+
+static NativeResult less(int argCount, Value* args) {
+    NativeResult result;
+    result.value = NULL_VAL;
+    result.success = false;
+
+    bool isLess = true;
+
+    if (argCount == 0) {
+        runtimeError("Attempted to call '<' with no arguments.");
+        return result;
+    }
+
+    if (!IS_NUMBER(args[0])) {
+        runtimeError("Attempted '<' with non-number");
+        return result;
+    }
+
+    for (int i = 0; i < argCount - 1; i++) {
+        Value first = args[i];
+        Value second = args[i+1];
+
+        if (!IS_NUMBER(second)) {
+            runtimeError("Attempted '>' with non-number");
+            return result;
+        }
+
+        double firstNum = AS_NUMBER(first);
+        double secondNum = AS_NUMBER(second);
+
+        if (!(firstNum < secondNum)) {
+            isLess = false;
+            break;
+        }
+    }
+
+    result.value = BOOL_VAL(isLess);
+    result.success = true;
+    return result;
+}
+
+static NativeResult equal(int count, Value* args) {
+    bool areEqual = true;
+    for (int i = 0; i < count - 1; i++) {
+        if (!valuesEqual(args[i], args[i+1])) {
+            areEqual = false;
+            break;
+        }
+    }
+
+    NativeResult result;
+    result.success = true;
+    result.value = BOOL_VAL(areEqual);
+    return result;
+}
+
+static NativeResult printVals(int argCount, Value* args) {
+    for (int i = 0; i < argCount; i++) {
+        printValue(args[i]);
+
+        printf(" ");
+    }
+    printf("\n");
+
+    NativeResult result;
+    result.success = true;
+    result.value = NULL_VAL;
+    return result;
+}
+
+static NativeResult strCat(int argCount, Value* args) {
+    int len = 1; // 1 for null terminator
+    char* str;
+
+    for (int i = 0; i < argCount; i++) {
+        Value v = args[i];
+        switch (v.type) {
+            case VAL_BOOL:
+                if (AS_BOOL(v)) {
+                    len += 4;
+                } else {
+                    len += 5;
+                }
+                break;
+            case VAL_NULL:
+                len += 4;
+                break;
+            case VAL_NUMBER:
+                sprintf(str, "%g", AS_NUMBER(v));
+                len += strlen(str);
+                break;
+            case VAL_OBJ:
+                len += AS_STRING(v)->length;
+        }
+    }
+
+    char* chars = ALLOCATE(char, len);
+    int current = 0;
+    ObjString* s;
+
+    for (int i = 0; i < argCount; i++) {
+        Value v = peek(argCount-i-1);
+        switch (v.type) {
+            case VAL_BOOL:
+                if (AS_BOOL(v)) {
+                    memcpy(chars+current, "true", 4);
+                    current += 4;
+                } else {
+                    memcpy(chars+current, "false", 5);
+                    current += 5;
+                }
+                break;
+            case VAL_NULL:
+                memcpy(chars+current, "null", 4);
+                current += 4;
+                break;
+            case VAL_NUMBER:
+                sprintf(str, "%g", AS_NUMBER(v));
+                int l = strlen(str);
+                memcpy(chars+current, str, l);
+                current += l;
+                break;
+            case VAL_OBJ:
+                s = AS_STRING(v);
+                memcpy(chars+current, s->chars, s->length);
+                current += s->length;
+                break;
+        }
+    }
+    chars[len-1] = '\0';
+    s = takeString(chars, len);
+
+    NativeResult result;
+    result.value = OBJ_VAL(s);
+    result.success = true;
+
+    return result;
+}
 
 // Reset the VM's stack my moving the pointer for the top of the stack to
 // the beginning of the stack array.
@@ -49,12 +364,31 @@ static void runtimeError(const char* format, ...) {
     resetStack();
 }
 
+static void defineNative(const char* name, NativeFn function) {
+    push(OBJ_VAL(copyString(name, (int)strlen(name))));
+    push(OBJ_VAL(newNative(function)));
+    tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
+    pop();
+    pop();
+}
+
 // Set the initial state of the VM.
 void initVM() {
     resetStack();
     vm.objects = NULL;
     initTable(&vm.strings);
     initTable(&vm.globals);
+
+    defineNative("+", add);
+    defineNative("*", multiply);
+    defineNative("-", subtract);
+    defineNative("/", divide);
+    defineNative("<", less);
+    defineNative(">", greater);
+    defineNative("=", equal);
+    defineNative("clock", clockNative);
+    defineNative("print", printVals);
+    defineNative("str", strCat);
 }
 
 void freeVM() {
@@ -105,249 +439,29 @@ static bool call(ObjFunction* function, int argCount) {
 }
 
 static bool callValue(Value callee, int argCount) {
-    if (!IS_FUNCTION(callee)) {
+    if (!IS_OBJ(callee)) {
         runtimeError("Can only call functions.");
         return false;
     }
 
-    return call(AS_FUNCTION(callee), argCount);
+    switch (AS_OBJ(callee)->type) {
+        case OBJ_FUNCTION:
+            return call(AS_FUNCTION(callee), argCount);
+        case OBJ_NATIVE: {
+            NativeFn native = AS_NATIVE(callee);
+            NativeResult result = native(argCount, vm.stackTop - argCount);
+            vm.stackTop -= argCount + 1;
+            push(result.value);
+            return result.success;
+        }
+        default:
+            runtimeError("Can only call functions.");
+            return false;
+    }
 }
 
 static bool isFalsey(Value value) {
     return IS_NULL(value) || (IS_BOOL(value) && !AS_BOOL(value));
-}
-
-static Value readBack(uint8_t count) {
-    return *(vm.stackTop - count);
-}
-
-static InterpretResult add(uint8_t count) {
-    double result = 0;
-
-    for (int i = 0; i < count; i++) {
-        if (!IS_NUMBER(peek(0))) {
-            runtimeError("Operand must be a number.");
-            return INTERPRET_RUNTIME_ERROR;
-        }
-        result += AS_NUMBER(pop());
-    }
-
-    push(NUMBER_VAL(result));
-    return INTERPRET_OK;
-}
-
-static InterpretResult multiply(uint8_t count) {
-    double result = 1;
-
-    for (int i = 0; i < count; i++) {
-        if (!IS_NUMBER(peek(0))) {
-            runtimeError("Operand must be a number.");
-            return INTERPRET_RUNTIME_ERROR;
-        }
-
-        result *= AS_NUMBER(pop());
-    }
-
-    push(NUMBER_VAL(result));
-    return INTERPRET_OK;
-}
-
-static InterpretResult subtract(uint8_t count) {
-    double sub = 0;
-
-    for (int i = 1; i < count; i++) {
-        if (!IS_NUMBER(peek(0))) {
-            runtimeError("Operand must be a number.");
-            return INTERPRET_RUNTIME_ERROR;
-        }
-
-        sub += AS_NUMBER(pop());
-    }
-
-    push(NUMBER_VAL(AS_NUMBER(pop()) - sub));
-    return INTERPRET_OK;
-}
-
-static InterpretResult divide(uint8_t count) {
-    if (!IS_NUMBER(peek(count))) {
-        runtimeError("Operand must be a number.");
-        return INTERPRET_RUNTIME_ERROR;
-    }
-    double first = AS_NUMBER(readBack(count));
-
-    for (int i = 1; i < count; i++) {
-        if (!IS_NUMBER(peek(0))) {
-            runtimeError("Operand must be a number.");
-            return INTERPRET_RUNTIME_ERROR;
-        }
-
-        double div = AS_NUMBER(pop());
-
-        if (div == 0) {
-            runtimeError("Attemped divide by zero");
-            return INTERPRET_RUNTIME_ERROR;
-        }
-
-        first /= div;
-    }
-
-    pop();
-    push(NUMBER_VAL(first));
-    return INTERPRET_OK;
-}
-
-static InterpretResult greater(uint8_t count) {
-    bool result = true;
-
-    if (!IS_NUMBER(peek(count-1))) {
-        runtimeError("Attempted '>' with non-number");
-        return INTERPRET_RUNTIME_ERROR;
-    }
-
-    for (int i = 0; i < count - 1; i++) {
-        Value first = peek(count-i-1);
-        Value second = peek(count-i-2);
-
-        if (!IS_NUMBER(second)) {
-            runtimeError("Attempted '>' with non-number");
-            return INTERPRET_RUNTIME_ERROR;
-        }
-
-        double firstNum = AS_NUMBER(first);
-        double secondNum = AS_NUMBER(second);
-
-        if (!(firstNum > secondNum)) {
-            result = false;
-            break;
-        }
-    }
-
-    popMultiple(count);
-    push(BOOL_VAL(result));
-    return INTERPRET_OK;
-}
-
-static InterpretResult less(uint8_t count) {
-    bool result = true;
-
-    if (!IS_NUMBER(peek(count-1))) {
-        runtimeError("Attempted '<' with non-number");
-        return INTERPRET_RUNTIME_ERROR;
-    }
-
-    for (int i = 0; i < count - 1; i++) {
-        Value first = peek(count-i-1);
-        Value second = peek(count-i-2);
-
-        if (!IS_NUMBER(second)) {
-            runtimeError("Attempted '>' with non-number");
-            return INTERPRET_RUNTIME_ERROR;
-        }
-
-        double firstNum = AS_NUMBER(first);
-        double secondNum = AS_NUMBER(second);
-
-        if (!(firstNum < secondNum)) {
-            result = false;
-            break;
-        }
-    }
-
-    popMultiple(count);
-    push(BOOL_VAL(result));
-    return INTERPRET_OK;
-}
-
-static void equal(uint8_t count) {
-    bool result = true;
-    for (int i = 0; i < count - 1; i++) {
-        if (!valuesEqual(peek(count-i-1), peek(count-i-2))) {
-            result = false;
-            break;
-        }
-    }
-
-    popMultiple(count);
-    push(BOOL_VAL(result));
-}
-
-static void strCat(uint8_t count) {
-    int len = 1; // 1 for null terminator
-    char* str;
-
-    for (int i = 0; i < count; i++) {
-        Value v = peek(count-i-1);
-        switch (v.type) {
-            case VAL_BOOL:
-                if (AS_BOOL(v)) {
-                    len += 4;
-                } else {
-                    len += 5;
-                }
-                break;
-            case VAL_NULL:
-                len += 4;
-                break;
-            case VAL_NUMBER:
-                sprintf(str, "%g", AS_NUMBER(v));
-                len += strlen(str);
-                break;
-            case VAL_OBJ:
-                len += AS_STRING(v)->length;
-        }
-    }
-
-    char* chars = ALLOCATE(char, len);
-    int current = 0;
-    ObjString* s;
-
-    for (int i = 0; i < count; i++) {
-        Value v = peek(count-i-1);
-        switch (v.type) {
-            case VAL_BOOL:
-                if (AS_BOOL(v)) {
-                    memcpy(chars+current, "true", 4);
-                    current += 4;
-                } else {
-                    memcpy(chars+current, "false", 5);
-                    current += 5;
-                }
-                break;
-            case VAL_NULL:
-                memcpy(chars+current, "null", 4);
-                current += 4;
-                break;
-            case VAL_NUMBER:
-                sprintf(str, "%g", AS_NUMBER(v));
-                int l = strlen(str);
-                memcpy(chars+current, str, l);
-                current += l;
-                break;
-            case VAL_OBJ:
-                s = AS_STRING(v);
-                memcpy(chars+current, s->chars, s->length);
-                current += s->length;
-                break;
-        }
-    }
-    chars[len-1] = '\0';
-
-    popMultiple(count);
-    s = takeString(chars, len);
-    push(OBJ_VAL(s));
-}
-
-static void printVals(uint8_t count) {
-    for (int i = 0; i < count; i++) {
-        Value v = peek(count-i-1);
-        printValue(v);
-
-        if (i < count - 1) printf(" ");
-    }
-    printf("\n");
-
-    popMultiple(count);
-    push(NULL_VAL);
 }
 
 // The run function is the main part of the interpreter.
@@ -389,40 +503,6 @@ static InterpretResult run() {
             case OP_NULL: push(NULL_VAL); break;
             case OP_TRUE: push(BOOL_VAL(true)); break;
             case OP_FALSE: push(BOOL_VAL(false)); break;
-            case OP_EQUAL: equal(READ_BYTE()); break;
-            case OP_GREATER:
-                if (greater(READ_BYTE()) != INTERPRET_OK) {
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                break;
-            case OP_LESS:
-                if (less(READ_BYTE()) != INTERPRET_OK) {
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                break;
-            case OP_ADD:
-                if (add(READ_BYTE()) != INTERPRET_OK) {
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                break;
-            case OP_SUBTRACT:   
-                if (subtract(READ_BYTE()) != INTERPRET_OK) {
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                break;
-            case OP_MULTIPLY:   
-                if (multiply(READ_BYTE()) != INTERPRET_OK) {
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                break;
-            case OP_DIVIDE:     
-                if (divide(READ_BYTE()) != INTERPRET_OK) {
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                break;
-            case OP_STR:
-                strCat(READ_BYTE());
-                break;
             case OP_NEGATE:
                 if (!IS_NUMBER(peek(0))) {
                     runtimeError("Operand must be a number.");
@@ -487,9 +567,6 @@ static InterpretResult run() {
                 frame = &vm.frames[vm.frameCount - 1];
                 break;
             }
-            case OP_PRINT:
-                printVals(READ_BYTE());
-                break;
             case OP_RETURN: {
                 Value result = pop();
                 vm.frameCount--;
