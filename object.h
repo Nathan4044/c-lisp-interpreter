@@ -8,7 +8,7 @@
 
 #define OBJ_TYPE(value) (AS_OBJ(value)->type)
 
-#define IS_CLOJURE(value) isObjType(value, OBJ_CLOSURE)
+#define IS_CLOSURE(value) isObjType(value, OBJ_CLOSURE)
 #define IS_FUNCTION(value) isObjType(value, OBJ_FUNCTION)
 #define IS_NATIVE(value) isObjType(value, OBJ_NATIVE)
 #define IS_STRING(value) isObjType(value, OBJ_STRING)
@@ -43,7 +43,7 @@ typedef struct {
     Value value;
 } NativeResult;
 
-typedef NativeResult (*NativeFn)(int argCount, Value* args);
+typedef bool (*NativeFn)(int argCount, Value* args, Value* result);
 
 typedef struct {
     Obj obj;

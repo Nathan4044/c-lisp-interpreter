@@ -19,154 +19,124 @@ VM vm;
 static Value peek(int n);
 static void runtimeError(const char* c, ...);
 
-static NativeResult clockNative(int argCount, Value* args) {
-    NativeResult result;
-
-    result.value = NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
-    result.success = true;
-
-    return result;
+static bool clockNative(int argCount, Value* args, Value* result) {
+    *result = NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
+    return true;
 }
 
-static NativeResult add(int argCount, Value* args) {
-    NativeResult result;
-    result.value = NULL_VAL;
-    result.success = false;
-
+static bool add(int argCount, Value* args, Value* result) {
     double total = 0;
 
     for (int i = 0; i < argCount; i++) {
         if (!IS_NUMBER(args[i])) {
             runtimeError("Operand must be a number.");
-            return result;
+            return false;
         }
         total += AS_NUMBER(args[i]);
     }
 
-    result.value = NUMBER_VAL(total);
-    result.success = true;
-    return result;
+    *result = NUMBER_VAL(total);
+    return true;
 }
 
-static NativeResult multiply(int argCount, Value* args) {
-    NativeResult result;
-    result.value = NULL_VAL;
-    result.success = false;
-
+static bool multiply(int argCount, Value* args, Value* result) {
     double total = 1;
 
     for (int i = 0; i < argCount; i++) {
         if (!IS_NUMBER(args[i])) {
             runtimeError("Operand must be a number.");
-            return result;
+            return false;
         }
 
         total *= AS_NUMBER(args[i]);
     }
 
-    result.value = NUMBER_VAL(total);
-    result.success = true;
-    return result;
+    *result = NUMBER_VAL(total);
+    return true;
 }
 
-static NativeResult subtract(int argCount, Value* args) {
-    NativeResult result;
-    result.value = NULL_VAL;
-    result.success = false;
-
+static bool subtract(int argCount, Value* args, Value* result) {
     switch (argCount) {
         case 0:
             runtimeError("Attempted to call '-' with no arguments.");
-            break;
+            return false;
         case 1:
             if (!IS_NUMBER(args[0])) {
                 runtimeError("Operand must be a number.");
-                break;
+                return false;
             }
-            result.value = NUMBER_VAL(-(AS_NUMBER(args[0])));
-            result.success = true;
+            *result = NUMBER_VAL(-(AS_NUMBER(args[0])));
+            return true;
         default: {
             double sub = 0;
 
             for (int i = 1; i < argCount; i++) {
                 if (!IS_NUMBER(args[i])) {
                     runtimeError("Operand must be a number.");
-                    return result;
+                    return false;
                 }
 
                 sub += AS_NUMBER(args[i]);
             }
 
-            result.value = NUMBER_VAL(AS_NUMBER(args[0]) - sub);
-            result.success = true;
+            *result = NUMBER_VAL(AS_NUMBER(args[0]) - sub);
+            return true;
         }
     }
-
-    return result;
 }
 
-static NativeResult divide(int argCount, Value* args) {
-    NativeResult result;
-    result.value = NULL_VAL;
-    result.success = false;
-
+static bool divide(int argCount, Value* args, Value* result) {
     switch (argCount) {
         case 0:
             runtimeError("Attempted to call '/' with no arguments.");
-            return result;
+            return false;
         case 1:
             if (!IS_NUMBER(args[0])) {
                 runtimeError("Operand must be a number.");
-                return result;
+                return false;
             }
-            result.value = NUMBER_VAL(-(AS_NUMBER(args[0])));
-            result.success = true;
-            return result;
+            *result = NUMBER_VAL(-(AS_NUMBER(args[0])));
+            return true;
         default: {
             if (!IS_NUMBER(args[0])) {
                 runtimeError("Operand must be a number.");
-                return result;
+                return false;
             }
             double first = AS_NUMBER(args[0]);
 
             for (int i = 1; i < argCount; i++) {
                 if (!IS_NUMBER(args[i])) {
                     runtimeError("Operand must be a number.");
-                    return result;
+                    return false;
                 }
 
                 double div = AS_NUMBER(args[i]);
 
                 if (div == 0) {
                     runtimeError("Attemped divide by zero");
-                    return result;
+                    return false;
                 }
 
                 first /= div;
             }
 
-            result.value = NUMBER_VAL(first);
-            result.success = true;
-            return result;
+            *result = NUMBER_VAL(first);
+            return true;
         }
     }
 }
 
-static NativeResult greater(int argCount, Value* args) {
-    NativeResult result;
-    result.value = NULL_VAL;
-    result.success = false;
-
+static bool greater(int argCount, Value* args, Value* result) {
     bool isGreater = true;
 
     if (argCount == 0) {
         runtimeError("Attempted to call '>' with no arguments.");
-        return result;
+        return false;
     }
 
     if (!IS_NUMBER(args[0])) {
         runtimeError("Attempted '>' with non-number");
-        return result;
+        return false;
     }
 
     for (int i = 0; i < argCount - 1; i++) {
@@ -175,7 +145,7 @@ static NativeResult greater(int argCount, Value* args) {
 
         if (!IS_NUMBER(second)) {
             runtimeError("Attempted '>' with non-number");
-            return result;
+            return false;
         }
 
         double firstNum = AS_NUMBER(first);
@@ -187,26 +157,21 @@ static NativeResult greater(int argCount, Value* args) {
         }
     }
 
-    result.value = BOOL_VAL(isGreater);
-    result.success = true;
-    return result;
+    *result = BOOL_VAL(isGreater);
+    return true;
 }
 
-static NativeResult less(int argCount, Value* args) {
-    NativeResult result;
-    result.value = NULL_VAL;
-    result.success = false;
-
+static bool less(int argCount, Value* args, Value* result) {
     bool isLess = true;
 
     if (argCount == 0) {
         runtimeError("Attempted to call '<' with no arguments.");
-        return result;
+        return false;
     }
 
     if (!IS_NUMBER(args[0])) {
         runtimeError("Attempted '<' with non-number");
-        return result;
+        return false;
     }
 
     for (int i = 0; i < argCount - 1; i++) {
@@ -215,7 +180,7 @@ static NativeResult less(int argCount, Value* args) {
 
         if (!IS_NUMBER(second)) {
             runtimeError("Attempted '>' with non-number");
-            return result;
+            return false;
         }
 
         double firstNum = AS_NUMBER(first);
@@ -227,12 +192,11 @@ static NativeResult less(int argCount, Value* args) {
         }
     }
 
-    result.value = BOOL_VAL(isLess);
-    result.success = true;
-    return result;
+    *result = BOOL_VAL(isLess);
+    return true;
 }
 
-static NativeResult equal(int count, Value* args) {
+static bool equal(int count, Value* args, Value* result) {
     bool areEqual = true;
     for (int i = 0; i < count - 1; i++) {
         if (!valuesEqual(args[i], args[i+1])) {
@@ -241,13 +205,11 @@ static NativeResult equal(int count, Value* args) {
         }
     }
 
-    NativeResult result;
-    result.success = true;
-    result.value = BOOL_VAL(areEqual);
-    return result;
+    *result = BOOL_VAL(areEqual);
+    return true;
 }
 
-static NativeResult printVals(int argCount, Value* args) {
+static bool printVals(int argCount, Value* args, Value* result) {
     for (int i = 0; i < argCount; i++) {
         printValue(args[i]);
 
@@ -255,13 +217,10 @@ static NativeResult printVals(int argCount, Value* args) {
     }
     printf("\n");
 
-    NativeResult result;
-    result.success = true;
-    result.value = NULL_VAL;
-    return result;
+    return true;
 }
 
-static NativeResult strCat(int argCount, Value* args) {
+static bool strCat(int argCount, Value* args, Value* result) {
     int len = 1; // 1 for null terminator
     char* str;
 
@@ -292,7 +251,7 @@ static NativeResult strCat(int argCount, Value* args) {
     ObjString* s;
 
     for (int i = 0; i < argCount; i++) {
-        Value v = peek(argCount-i-1);
+        Value v = args[i];
         switch (v.type) {
             case VAL_BOOL:
                 if (AS_BOOL(v)) {
@@ -323,11 +282,8 @@ static NativeResult strCat(int argCount, Value* args) {
     chars[len-1] = '\0';
     s = takeString(chars, len);
 
-    NativeResult result;
-    result.value = OBJ_VAL(s);
-    result.success = true;
-
-    return result;
+    *result = OBJ_VAL(s);
+    return true;
 }
 
 // Reset the VM's stack my moving the pointer for the top of the stack to
@@ -449,10 +405,11 @@ static bool callValue(Value callee, int argCount) {
             return call(AS_CLOSURE(callee), argCount);
         case OBJ_NATIVE: {
             NativeFn native = AS_NATIVE(callee);
-            NativeResult result = native(argCount, vm.stackTop - argCount);
+            Value result = NULL_VAL;
+            bool successful = native(argCount, vm.stackTop - argCount, &result);
             vm.stackTop -= argCount + 1;
-            push(result.value);
-            return result.success;
+            push(result);
+            return successful;
         }
         default:
             runtimeError("Can only call functions.");
