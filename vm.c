@@ -312,11 +312,6 @@ static void runtimeError(const char* format, ...) {
             fprintf(stderr, "%s()\n", function->name->chars);
         }
     }
-
-    CallFrame* frame = &vm.frames[vm.frameCount - 1];
-    size_t instruction = frame->ip - frame->closure->function->chunk.code - 1;
-    int line = frame->closure->function->chunk.lines[instruction];
-    fprintf(stderr, "[line %d] in script\n", line);
     resetStack();
 }
 
