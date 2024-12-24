@@ -1,5 +1,6 @@
 #include "debug.h"
 #include "chunk.h"
+#include "value.h"
 #include <stdint.h>
 #include <stdio.h>
 
@@ -101,6 +102,14 @@ int disassembleInstruction(Chunk *chunk, int offset) {
             return jumpInstruction("OP_LOOP", -1, chunk, offset);
         case OP_CALL:
             return byteInstruction("OP_CALL", chunk, offset);
+        case OP_CLOSURE: {
+            offset++;
+            uint8_t constant = chunk->code[offset++];
+            printf("%-16s %4d ", "OP_CLOSURE", constant);
+            printValue(chunk->constants.values[constant]);
+            printf("\n");
+            return offset;
+        }
         default:
             printf("Unknown opcode %d\n", instruction);
             return offset + 1;
