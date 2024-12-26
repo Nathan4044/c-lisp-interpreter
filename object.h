@@ -38,11 +38,6 @@ typedef struct {
     ObjString* name;
 } ObjFunction;
 
-typedef struct {
-    bool success;
-    Value value;
-} NativeResult;
-
 typedef bool (*NativeFn)(int argCount, Value* args, Value* result);
 
 typedef struct {

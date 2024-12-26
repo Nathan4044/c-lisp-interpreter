@@ -17,7 +17,9 @@ void writeValueArray(ValueArray *array, Value value) {
     if (array->capacity < array->count + 1) {
         int oldCapacity = array->capacity;
         int newCapacity = GROW_CAPACITY(oldCapacity);
+
         array->values = GROW_ARRAY(Value, array->values, oldCapacity, newCapacity);
+        array->capacity = newCapacity;
     }
 
     array->values[array->count] = value;
@@ -42,6 +44,7 @@ void printValue(Value value) {
     }
 }
 
+// Checks is two given values are the same, based on their types.
 bool valuesEqual(Value a, Value b) {
     if (a.type != b.type) return false;
 

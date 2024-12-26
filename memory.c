@@ -24,6 +24,7 @@ void* reallocate(void *pointer, size_t oldSize, size_t newSize) {
     return result;
 }
 
+// Free the memory used by the object at the given address.
 static void freeObject(Obj* object) {
     switch (object->type) {
         case OBJ_STRING: {
@@ -48,6 +49,7 @@ static void freeObject(Obj* object) {
     }
 }
 
+// Free all objects that have been allocated in the VM.
 void freeObjects() {
     Obj* object = vm.objects;
     while (object != NULL) {

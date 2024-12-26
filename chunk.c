@@ -1,8 +1,10 @@
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "chunk.h"
 #include "memory.h"
+#include "value.h"
 
 // initChunk initialises all values of a Chunk to their correct zero value.
 void initChunk(Chunk *chunk) {
@@ -29,6 +31,7 @@ void writeChunk(Chunk *chunk, uint8_t byte, int line) {
     chunk->count++;
 }
 
+// overwriteLast changes the value of the previous byte to the provided one.
 void overwriteLast(Chunk *chunk, uint8_t byte) {
     chunk->code[chunk->count-1] = byte;
 }

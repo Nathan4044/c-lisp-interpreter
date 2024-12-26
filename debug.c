@@ -22,6 +22,7 @@ static int simpleInstruction(const char* name, int offset) {
     return offset + 1;
 }
 
+// Prints an instruction that has a byte argument.
 static int byteInstruction(const char* name, Chunk* chunk, int offset) {
     uint8_t slot = chunk->code[offset+1];
     printf("%-16s %4d\n", name, slot);
@@ -46,6 +47,7 @@ static int rangeInstruction(const char* name, Chunk* chunk, int offset) {
     return offset + 2;
 }
 
+// Prints a jump instruction, along with the destination index.
 static int jumpInstruction(const char* name, int sign, Chunk* chunk, int offset) {
     uint16_t jump = (uint16_t)(chunk->code[offset + 1] << 8);
     jump |= chunk->code[offset + 2];
@@ -78,10 +80,6 @@ int disassembleInstruction(Chunk *chunk, int offset) {
             return simpleInstruction("OP_TRUE", offset);
         case OP_FALSE:
             return simpleInstruction("OP_FALSE", offset);
-        case OP_NEGATE:
-            return simpleInstruction("OP_NEGATE", offset);
-        case OP_NOT:
-            return simpleInstruction("OP_NOT", offset);
         case OP_RETURN:
             return simpleInstruction("OP_RETURN", offset);
         case OP_POP:

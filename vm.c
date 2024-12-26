@@ -2,13 +2,13 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 
 #include "chunk.h"
 #include "common.h"
 #include "compiler.h"
 #include "debug.h"
 #include "memory.h"
+#include "nativeFns.h"
 #include "object.h"
 #include "table.h"
 #include "value.h"
@@ -16,274 +16,9 @@
 
 VM vm;
 
-static Value peek(int n);
-static void runtimeError(const char* c, ...);
-
-static bool clockNative(int argCount, Value* args, Value* result) {
-    *result = NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
-    return true;
-}
-
-static bool add(int argCount, Value* args, Value* result) {
-    double total = 0;
-
-    for (int i = 0; i < argCount; i++) {
-        if (!IS_NUMBER(args[i])) {
-            runtimeError("Operand must be a number.");
-            return false;
-        }
-        total += AS_NUMBER(args[i]);
-    }
-
-    *result = NUMBER_VAL(total);
-    return true;
-}
-
-static bool multiply(int argCount, Value* args, Value* result) {
-    double total = 1;
-
-    for (int i = 0; i < argCount; i++) {
-        if (!IS_NUMBER(args[i])) {
-            runtimeError("Operand must be a number.");
-            return false;
-        }
-
-        total *= AS_NUMBER(args[i]);
-    }
-
-    *result = NUMBER_VAL(total);
-    return true;
-}
-
-static bool subtract(int argCount, Value* args, Value* result) {
-    switch (argCount) {
-        case 0:
-            runtimeError("Attempted to call '-' with no arguments.");
-            return false;
-        case 1:
-            if (!IS_NUMBER(args[0])) {
-                runtimeError("Operand must be a number.");
-                return false;
-            }
-            *result = NUMBER_VAL(-(AS_NUMBER(args[0])));
-            return true;
-        default: {
-            double sub = 0;
-
-            for (int i = 1; i < argCount; i++) {
-                if (!IS_NUMBER(args[i])) {
-                    runtimeError("Operand must be a number.");
-                    return false;
-                }
-
-                sub += AS_NUMBER(args[i]);
-            }
-
-            *result = NUMBER_VAL(AS_NUMBER(args[0]) - sub);
-            return true;
-        }
-    }
-}
-
-static bool divide(int argCount, Value* args, Value* result) {
-    switch (argCount) {
-        case 0:
-            runtimeError("Attempted to call '/' with no arguments.");
-            return false;
-        case 1:
-            if (!IS_NUMBER(args[0])) {
-                runtimeError("Operand must be a number.");
-                return false;
-            }
-            *result = NUMBER_VAL(-(AS_NUMBER(args[0])));
-            return true;
-        default: {
-            if (!IS_NUMBER(args[0])) {
-                runtimeError("Operand must be a number.");
-                return false;
-            }
-            double first = AS_NUMBER(args[0]);
-
-            for (int i = 1; i < argCount; i++) {
-                if (!IS_NUMBER(args[i])) {
-                    runtimeError("Operand must be a number.");
-                    return false;
-                }
-
-                double div = AS_NUMBER(args[i]);
-
-                if (div == 0) {
-                    runtimeError("Attemped divide by zero");
-                    return false;
-                }
-
-                first /= div;
-            }
-
-            *result = NUMBER_VAL(first);
-            return true;
-        }
-    }
-}
-
-static bool greater(int argCount, Value* args, Value* result) {
-    bool isGreater = true;
-
-    if (argCount == 0) {
-        runtimeError("Attempted to call '>' with no arguments.");
-        return false;
-    }
-
-    if (!IS_NUMBER(args[0])) {
-        runtimeError("Attempted '>' with non-number");
-        return false;
-    }
-
-    for (int i = 0; i < argCount - 1; i++) {
-        Value first = args[i];
-        Value second = args[i+1];
-
-        if (!IS_NUMBER(second)) {
-            runtimeError("Attempted '>' with non-number");
-            return false;
-        }
-
-        double firstNum = AS_NUMBER(first);
-        double secondNum = AS_NUMBER(second);
-
-        if (!(firstNum > secondNum)) {
-            isGreater = false;
-            break;
-        }
-    }
-
-    *result = BOOL_VAL(isGreater);
-    return true;
-}
-
-static bool less(int argCount, Value* args, Value* result) {
-    bool isLess = true;
-
-    if (argCount == 0) {
-        runtimeError("Attempted to call '<' with no arguments.");
-        return false;
-    }
-
-    if (!IS_NUMBER(args[0])) {
-        runtimeError("Attempted '<' with non-number");
-        return false;
-    }
-
-    for (int i = 0; i < argCount - 1; i++) {
-        Value first = args[i];
-        Value second = args[i+1];
-
-        if (!IS_NUMBER(second)) {
-            runtimeError("Attempted '>' with non-number");
-            return false;
-        }
-
-        double firstNum = AS_NUMBER(first);
-        double secondNum = AS_NUMBER(second);
-
-        if (!(firstNum < secondNum)) {
-            isLess = false;
-            break;
-        }
-    }
-
-    *result = BOOL_VAL(isLess);
-    return true;
-}
-
-static bool equal(int count, Value* args, Value* result) {
-    bool areEqual = true;
-    for (int i = 0; i < count - 1; i++) {
-        if (!valuesEqual(args[i], args[i+1])) {
-            areEqual = false;
-            break;
-        }
-    }
-
-    *result = BOOL_VAL(areEqual);
-    return true;
-}
-
-static bool printVals(int argCount, Value* args, Value* result) {
-    for (int i = 0; i < argCount; i++) {
-        printValue(args[i]);
-
-        printf(" ");
-    }
-    printf("\n");
-
-    return true;
-}
-
-static bool strCat(int argCount, Value* args, Value* result) {
-    int len = 1; // 1 for null terminator
-    char* str;
-
-    for (int i = 0; i < argCount; i++) {
-        Value v = args[i];
-        switch (v.type) {
-            case VAL_BOOL:
-                if (AS_BOOL(v)) {
-                    len += 4;
-                } else {
-                    len += 5;
-                }
-                break;
-            case VAL_NULL:
-                len += 4;
-                break;
-            case VAL_NUMBER:
-                sprintf(str, "%g", AS_NUMBER(v));
-                len += strlen(str);
-                break;
-            case VAL_OBJ:
-                len += AS_STRING(v)->length;
-        }
-    }
-
-    char* chars = ALLOCATE(char, len);
-    int current = 0;
-    ObjString* s;
-
-    for (int i = 0; i < argCount; i++) {
-        Value v = args[i];
-        switch (v.type) {
-            case VAL_BOOL:
-                if (AS_BOOL(v)) {
-                    memcpy(chars+current, "true", 4);
-                    current += 4;
-                } else {
-                    memcpy(chars+current, "false", 5);
-                    current += 5;
-                }
-                break;
-            case VAL_NULL:
-                memcpy(chars+current, "null", 4);
-                current += 4;
-                break;
-            case VAL_NUMBER:
-                sprintf(str, "%g", AS_NUMBER(v));
-                int l = strlen(str);
-                memcpy(chars+current, str, l);
-                current += l;
-                break;
-            case VAL_OBJ:
-                s = AS_STRING(v);
-                memcpy(chars+current, s->chars, s->length);
-                current += s->length;
-                break;
-        }
-    }
-    chars[len-1] = '\0';
-    s = takeString(chars, len);
-
-    *result = OBJ_VAL(s);
-    return true;
+// Return the Value n positions from the top, without removing it.
+static Value peek(int distance) {
+    return vm.stackTop[-1 - distance];
 }
 
 // Reset the VM's stack my moving the pointer for the top of the stack to
@@ -293,7 +28,10 @@ static void resetStack() {
     vm.frameCount = 0;
 }
 
-static void runtimeError(const char* format, ...) {
+// Write an error message to stderr from the provided string template and
+// passed values. Print a stack trace of the call stack at the time of the error
+// and the remove all items from the stack.
+void runtimeError(const char* format, ...) {
     va_list args;
     va_start(args, format);
     vfprintf(stderr, format, args);
@@ -315,6 +53,7 @@ static void runtimeError(const char* format, ...) {
     resetStack();
 }
 
+// Add a native function to the globals pool with the given identifier.
 static void defineNative(const char* name, NativeFn function) {
     push(OBJ_VAL(copyString(name, (int)strlen(name))));
     push(OBJ_VAL(newNative(function)));
@@ -324,6 +63,7 @@ static void defineNative(const char* name, NativeFn function) {
 }
 
 // Set the initial state of the VM.
+// Zero all the VM's fields, and add all relevant native functions.
 void initVM() {
     resetStack();
     vm.objects = NULL;
@@ -340,8 +80,10 @@ void initVM() {
     defineNative("clock", clockNative);
     defineNative("print", printVals);
     defineNative("str", strCat);
+    defineNative("not", not_);
 }
 
+// Free all allocated memory associated with the VM.
 void freeVM() {
     freeObjects();
     freeTable(&vm.strings);
@@ -360,16 +102,9 @@ Value pop() {
     return *vm.stackTop;
 }
 
-Value popMultiple(int count) {
-    vm.stackTop -= count;
-    return *vm.stackTop;
-}
-
-// Return the Value n positions from the top, without removing it.
-static Value peek(int distance) {
-    return vm.stackTop[-1 - distance];
-}
-
+// Add a new frame to the call stack, designate the slots for parameters that
+// have been passed in, and execute the bytecode stored in the function of the
+// provided closure.
 static bool call(ObjClosure* closure, int argCount) {
     if (argCount != closure->function->arity) {
         runtimeError("Expected %d arguments but got %d.",
@@ -389,6 +124,7 @@ static bool call(ObjClosure* closure, int argCount) {
     return true;
 }
 
+// Properly execute the call convention for the given value type.
 static bool callValue(Value callee, int argCount) {
     if (!IS_OBJ(callee)) {
         runtimeError("Can only call functions.");
@@ -412,7 +148,8 @@ static bool callValue(Value callee, int argCount) {
     }
 }
 
-static bool isFalsey(Value value) {
+// Return true if the given value is equivelent to false in lisp.
+bool isFalsey(Value value) {
     return IS_NULL(value) || (IS_BOOL(value) && !AS_BOOL(value));
 }
 
@@ -456,16 +193,6 @@ static InterpretResult run() {
             case OP_NULL: push(NULL_VAL); break;
             case OP_TRUE: push(BOOL_VAL(true)); break;
             case OP_FALSE: push(BOOL_VAL(false)); break;
-            case OP_NEGATE:
-                if (!IS_NUMBER(peek(0))) {
-                    runtimeError("Operand must be a number.");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                push(NUMBER_VAL(-AS_NUMBER(pop())));
-                break;
-            case OP_NOT:
-                push(BOOL_VAL(isFalsey(pop())));
-                break;
             case OP_POP:
                 pop();
                 break;
@@ -552,7 +279,9 @@ static InterpretResult run() {
 #undef READ_BYTE
 }
 
-// The function called to handle the execution of the provided Chunk in the VM.
+// The given source code is compiled to bytecode and stored in a top-level 
+// function. If there are no compilation errors, the returned function is then
+// executed on the VM.
 InterpretResult interpret(const char* source) {
     ObjFunction* function = compile(source);
     if (function == NULL) return INTERPRET_COMPILE_ERROR;

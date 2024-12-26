@@ -33,16 +33,13 @@ typedef void (*ParseFn)();
 
 static void expression();
 
-typedef struct {
-    ParseFn expr;
-    ParseFn sExpr;
-}   ParseRule;
+static ParseFn getRule(TokenType type);
 
-static ParseRule getRule(TokenType type);
-
+// Local is the compiler's representation of a local variable that will exist
+// on the stack.
 typedef struct {
-    Token name;
-    int depth;
+    Token name; // Contains the string of the variable name.
+    int depth; // How deeply nested the variable is.
 } Local;
 
 typedef enum {
@@ -50,10 +47,20 @@ typedef enum {
     TYPE_SCRIPT,
 } FunctionType;
 
+// A representation of the current state of the compiler.
 typedef struct Compiler {
+    // When compiling a function, a new compiler is created, and the current
+    // compiler becomes the enclosing compiler of the new one. Since function
+    // definitions can be arbitrarily nested, this can create a list of
+    // compilers.
     struct Compiler* enclosing;
+    // Function is the current function being compiled to bytecode. For
+    // consistency and simplicity, the top level expressions of the script are
+    // counted as a function as well.
     ObjFunction* function;
-    FunctionType type;
+    // Indicates whether the compiler is compiling the script or an individual
+    // function.
+    FunctionType type; 
 
     Local locals[UINT8_COUNT];
     int localCount;
@@ -126,10 +133,12 @@ static void consume(TokenType type, const char* message) {
     errorAtCurrent(message);
 }
 
+// Is the next token to be compiled of the given type?
 static bool check(TokenType type) {
     return parser.current.type == type;
 }
 
+// If the next token is of the provided token type, consume it and return true.
 static bool match(TokenType type) {
     if (!check(type)) return false;
     advance();
@@ -153,6 +162,8 @@ static void emitReturn() {
     overwriteLast(currentChunk(), OP_RETURN);
 }
 
+// Emit a jump instruction with a dummy value, with all bits set to 1.
+// This allows it to be replaced with bitwise and operations.
 static int emitJump(uint8_t instruction) {
     emitByte(instruction);
     emitByte(0xff);
@@ -160,6 +171,8 @@ static int emitJump(uint8_t instruction) {
     return currentChunk()->count - 2;
 }
 
+// Replace the jump instruction at the provided offset with the current 
+// location.
 static void patchJump(int offset) {
     // -2 to get before the jump offset operand
     int jump = currentChunk()->count - offset - 2;
@@ -174,6 +187,7 @@ static void patchJump(int offset) {
     currentChunk()->code[offset+1] = jump & 0xff;
 }
 
+// Emit a loop instruction that will jump back to the provided offset.
 static void emitLoop(int loopStart) {
     emitByte(OP_LOOP);
 
@@ -210,6 +224,7 @@ static void emitConstant(Value value) {
     emitBytes(OP_CONSTANT, makeConstant(value));
 }
 
+// Set the zero value of all the fields in a compiler.
 static void initCompiler(Compiler* compiler, FunctionType type) {
     compiler->enclosing = current;
     compiler->function = NULL;
@@ -246,10 +261,14 @@ static ObjFunction* endCompiler() {
     return function;
 }
 
+// Add one to the scope depth, used to track the nesting depth of local
+// variables.
 static void beginScope() {
     current->scopeDepth++;
 }
 
+// Remove one from the scope depth, and remove all local variables at the
+// removed scope.
 static void endScope() {
     current->scopeDepth--;
 
@@ -260,11 +279,15 @@ static void endScope() {
     }
 }
 
+// Emit an instruction to retrieve the constant number value and place it on
+// the stack.
 static void number() {
     double value = strtod(parser.previous.start, NULL);
     emitConstant(NUMBER_VAL(value));
 }
 
+// Compile the appropriate expressions for each of the arguments passed to a
+// function, return the number of arguments compiled.
 static int compileArgs() {
     int operandCount = 0;
     while (parser.current.type != TOKEN_RIGHT_PAREN) {
@@ -285,30 +308,11 @@ static int compileArgs() {
     return operandCount;
 }
 
-static void not() {
-    int operandCount = compileArgs();
-
-    if (operandCount < 0) {
-        return;
-    }
-    advance();
-
-    switch (operandCount) {
-        case 0:
-            error("attemped to call not with no arguments");
-            return;
-        case 1:
-            emitByte(OP_NOT);
-            break;
-        default:
-            error("attemped to call not with too many arguments");
-            return;
-    }
-}
-
 static uint8_t parseVariable(const char* message);
 static void defineVariable(uint8_t index);
 
+// Compile a function object from a lambda definition, emit bytes that will
+// convert the function to a closure at runtime.
 static void lambda() {
     Compiler compiler;
     initCompiler(&compiler, TYPE_FUNCTION);
@@ -334,6 +338,7 @@ static void lambda() {
     emitBytes(OP_CLOSURE, makeConstant(OBJ_VAL(function)));
 }
 
+// Compile an if expression, with an optional else value (defaults to null).
 static void ifExpr() {
     expression();
 
@@ -356,6 +361,9 @@ static void ifExpr() {
     patchJump(elseJump);
 }
 
+// Compile an and expression, which executes expressions until one is falsey,
+// at which point it skips the remaining expressions and returns the falsey
+// value. If none are falsey then the final expression is returned.
 static void and_() {
     int operandCount = 0;
     int jumps[UINT8_MAX];
@@ -392,6 +400,9 @@ static void and_() {
     return;
 }
 
+// Compile an or expression, which executes expressions until one is thruthy,
+// at which point it skips the remaining expressions and returns the truthy
+// value. If none are truthy then the final expression is returned.
 static void or_() {
     int operandCount = 0;
     int jumps[UINT8_MAX];
@@ -431,6 +442,9 @@ static void or_() {
     return;
 }
 
+// Compiles a while expression, which always returns a null value.
+// Repeatedly executes the provided expressions until the condition expression
+// evaluates to a falsey value.
 static void while_() {
     int loopStart = currentChunk()->count;
     expression();
@@ -450,16 +464,35 @@ static void while_() {
     advance();
 }
 
-static void call() {
-    // retrieve function
-    ParseFn rule = *getRule(parser.previous.type).expr;
+// Parse a def expression by finding the associated variable location,
+// parsing the expression associated with the variable's value, and emitting a
+// define OpCode to put the variable in the correct corresponding location.
+static void def() {
+    uint8_t index = parseVariable("Expect variable name.");
 
-    if (rule == NULL) {
-        error("Expect expression.");
-        return;
+    expression();
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' at end of def expression.");
+
+    Value* val = &currentChunk()->constants.values[currentChunk()->constants.count - 1];
+    if (IS_FUNCTION(*val)) {
+        ObjString* name = AS_STRING(currentChunk()->constants.values[index]);
+        AS_FUNCTION(*val)->name = name;
     }
 
-    rule();
+    defineVariable(index);
+}
+
+static void parseExpression();
+
+// Compile a call in an s-expression.
+// First compiles the expression that places the function on the stack.
+// Next, compile the expressions for each of the arguments so they're placed
+// on the stack above the function.
+// Finally, emit the call opcode for calling the function, along with the
+// argument count.
+static void call() {
+    // retrieve function
+    parseExpression();
 
     uint8_t argCount = 0;
     while (!match(TOKEN_RIGHT_PAREN)) {
@@ -480,15 +513,89 @@ static void call() {
     emitBytes(OP_CALL, argCount);
 }
 
+// Compile an S expression of the form (fn arg1 arg2 arg3...) where the fn is
+// compiled based on its associated rule, followed by each arg as an expression.
+static void sExpression() {
+    parser.lParenCount++;
+    advance();
+
+    TokenType operatorType = parser.previous.type;
+
+    switch(operatorType) {
+        case TOKEN_AND:
+            and_();
+            break;
+        case TOKEN_DEF:
+            def();
+            break;
+        case TOKEN_IF:
+            ifExpr();
+            break;
+        case TOKEN_LAMBDA:
+            lambda();
+            break;
+        case TOKEN_OR:
+            or_();
+            break;
+        case TOKEN_WHILE:
+            while_();
+            break;
+        default:
+            call();
+    }
+
+    parser.lParenCount--;
+}
+
+// Compile the given token to the current form of literal value.
+static void literal() {
+    switch (parser.previous.type) {
+        case TOKEN_FALSE: emitByte(OP_FALSE); break;
+        case TOKEN_NULL: emitByte(OP_NULL); break;
+        case TOKEN_TRUE: emitByte(OP_TRUE); break;
+        default: return; // unreachable
+    }
+}
+
+// Create a string constant from the previously consumed token, and emit an
+// OpCode to load it onto the stack.
+static void string() {
+    emitConstant(OBJ_VAL(copyString(parser.previous.start+1,
+                    parser.previous.length-2)));
+}
+
+static void variable();
+
+// Internal function for parsing all forms of expression.
+static void parseExpression() {
+    switch(parser.previous.type) {
+        case TOKEN_LEFT_PAREN: sExpression(); break;
+        case TOKEN_IDENTIFIER: variable(); break;
+        case TOKEN_STRING: string(); break;
+        case TOKEN_NUMBER: number(); break;
+        case TOKEN_FALSE: literal(); break;
+        case TOKEN_NULL: literal(); break;
+        case TOKEN_TRUE: literal(); break;
+        default:
+            error("Expect expression.");
+    }
+}
+
+// Add the given identifier token to the constant table as a string value.
+// Return the constant index.
 static uint8_t identifierConstant(Token* name) {
     return makeConstant(OBJ_VAL(copyString(name->start, name->length)));
 }
 
+// Check if 2 identifier tokens are of the same length and contain the same
+// characters.
 static bool identifiersEqual(Token* a, Token* b) {
     if (a->length != b->length) return false;
     return memcmp(a->start, b->start, a->length) == 0;
 }
 
+// Look backward through the local variables to find the index of the most
+// recent match and return its index. Return -1 if no match found.
 static int resolveLocal(Compiler* compiler, Token* name) {
     for (int i = compiler->localCount - 1; i >= 0; i--) {
         Local* local = &compiler->locals[i];
@@ -500,6 +607,9 @@ static int resolveLocal(Compiler* compiler, Token* name) {
     return -1;
 }
 
+// Add an OpCode to get the variable of the given token name and add it to the
+// stack. Try to find a variable with the matching name from the list of locals,
+// if none are found then assume the variable is a global.
 static void namedVariable(Token name) {
     uint8_t getOp = OP_GET_LOCAL;
     int arg = resolveLocal(current, &name);
@@ -512,10 +622,14 @@ static void namedVariable(Token name) {
     emitBytes(getOp, arg);
 }
 
+// Fetch a variable with the name given in the last consumed token.
 static void variable() {
     namedVariable(parser.previous);
 }
 
+// Called in the event an error has occurred. Finds the next likely point that
+// the current expression ends, in order to find multiple genuine errors without
+// multiple errors being reported for the same problem.
 static void synchronize() {
     parser.panicMode = false;
 
@@ -536,52 +650,16 @@ static void synchronize() {
     }
 }
 
-static void sExpression() {
-    parser.lParenCount++;
-    advance();
-
-    TokenType operatorType = parser.previous.type;
-
-    ParseFn fn = *getRule(operatorType).sExpr;
-
-    if (fn == NULL) {
-        call();
-        return;
-    }
-
-    fn();
-    parser.lParenCount--;
-}
-
-// Compile the given token to the current form of literal value.
-static void literal() {
-    switch (parser.previous.type) {
-        case TOKEN_FALSE: emitByte(OP_FALSE); break;
-        case TOKEN_NULL: emitByte(OP_NULL); break;
-        case TOKEN_TRUE: emitByte(OP_TRUE); break;
-        default: return; // unreachable
-    }
-}
-
-static void string() {
-    emitConstant(OBJ_VAL(copyString(parser.previous.start+1,
-                    parser.previous.length-2)));
-}
-
+// Top level parsing function to compile all expressions.
+// Parse the expression and handle any error that occurred in it.
 static void expression() {
     advance();
-    ParseFn rule = *getRule(parser.previous.type).expr;
-
-    if (rule == NULL) {
-        error("Expect expression.");
-        return;
-    }
-
-    rule();
+    parseExpression();
 
     if (parser.panicMode) synchronize();
 }
 
+// Add a new local variable to the currently compiling function.
 static int addLocal(Token name) {
     if (current->localCount == UINT8_COUNT) {
         error("Too many local variables in function.");
@@ -594,6 +672,8 @@ static int addLocal(Token name) {
     return current->localCount - 1;
 }
 
+// If a local variable already exists, return it's index. If not, create a new
+// local variable. Return -1 if the variable is being declared at global scope.
 static int declareVariable() {
     if (current->scopeDepth == 0) return -1;
 
@@ -614,6 +694,7 @@ static int declareVariable() {
     return addLocal(*name);
 }
 
+// Parse an identifier token to return the associated variable's index.
 static uint8_t parseVariable(const char* errorMessage) {
     consume(TOKEN_IDENTIFIER, errorMessage);
 
@@ -625,6 +706,7 @@ static uint8_t parseVariable(const char* errorMessage) {
     }
 }
 
+// Emit a define OpCode based on the current scope depth.
 static void defineVariable(uint8_t index) {
     uint8_t setOp = OP_DEFINE_LOCAL;
     if (current->scopeDepth == 0) {
@@ -632,49 +714,6 @@ static void defineVariable(uint8_t index) {
     }
 
     emitBytes(setOp, index);
-}
-
-static void def() {
-    uint8_t index = parseVariable("Expect variable name.");
-
-    expression();
-    consume(TOKEN_RIGHT_PAREN, "Expect ')' at end of def expression.");
-
-    Value* val = &currentChunk()->constants.values[currentChunk()->constants.count - 1];
-    if (IS_FUNCTION(*val)) {
-        ObjString* name = AS_STRING(currentChunk()->constants.values[index]);
-        AS_FUNCTION(*val)->name = name;
-    }
-
-    defineVariable(index);
-}
-
-ParseRule rules[] = {
-    [TOKEN_LEFT_PAREN]      = { sExpression, NULL },
-    [TOKEN_RIGHT_PAREN]     = { NULL, NULL },
-    [TOKEN_LEFT_BRACE]      = { NULL, NULL },
-    [TOKEN_RIGHT_BRACE]     = { NULL, NULL },
-    [TOKEN_IDENTIFIER]      = { variable, NULL },
-    [TOKEN_STRING]          = { string, NULL },
-    [TOKEN_NUMBER]          = { number, NULL },
-    [TOKEN_AND]             = { NULL, and_ },
-    [TOKEN_DEF]             = { NULL, def },
-    [TOKEN_FALSE]           = { literal, NULL },
-    [TOKEN_FOR]             = { NULL, NULL },
-    [TOKEN_IF]              = { NULL, ifExpr },
-    [TOKEN_LAMBDA]          = { NULL, lambda },
-    [TOKEN_NOT]             = { NULL, not },
-    [TOKEN_NULL]            = { literal, NULL },
-    [TOKEN_OR]              = { NULL, or_ },
-    [TOKEN_TRUE]            = { literal, NULL },
-    [TOKEN_WHILE]           = { NULL, while_ },
-    [TOKEN_ERROR]           = { NULL, NULL },
-    [TOKEN_EOF]             = { NULL, NULL },
-};
-
-// Return the correct fule from the rules array.
-static ParseRule getRule(TokenType type) {
-    return rules[type];
 }
 
 // Compile takes a string of source code, scans the tokens, and compiles them
