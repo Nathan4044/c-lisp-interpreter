@@ -27,6 +27,7 @@ typedef struct {
     Table globals;
     Table strings;
     Obj* objects;
+    ObjUpvalue* openUpvalues;
 } VM;
 
 // A representation of the different return states of running the VM.

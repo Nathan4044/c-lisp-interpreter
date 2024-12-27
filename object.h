@@ -24,6 +24,7 @@ typedef enum {
     OBJ_FUNCTION,
     OBJ_CLOSURE,
     OBJ_NATIVE,
+    OBJ_UPVALUE,
 } ObjType;
 
 struct Obj {
@@ -34,6 +35,7 @@ struct Obj {
 typedef struct {
     Obj obj;
     int arity;
+    int upvalueCount;
     Chunk chunk;
     ObjString* name;
 } ObjFunction;
@@ -52,14 +54,34 @@ struct ObjString {
     uint32_t hash;
 };
 
+// ObjUpvalue is the runtime representation of a variable that has been lifted
+// from its scope in a closure. Most of the time, they will be references to
+// earlier points on the stack, before the current function's scope, but
+// in the circumstance it is lifted from the scope it is 'closed over', and
+// placed in the closed value parameter.
+typedef struct ObjUpvalue {
+    Obj obj;
+    // Points to the location of the value, either on the stack or lifted into
+    // the closed parameter.
+    Value* location;
+    // Contains the value associated with the variable at the time it is lifted.
+    Value closed;
+    // Used to keep track of all open Upvalues at runtime. An intrusive list
+    // held by the VM.
+    struct ObjUpvalue* next;
+} ObjUpvalue;
+
 typedef struct {
     Obj obj;
     ObjFunction* function;
+    ObjUpvalue** upvalues;
+    int upvalueCount;
 } ObjClosure;
 
 ObjClosure* newClosure(ObjFunction* function);
 ObjFunction* newFunction();
 ObjNative* newNative(NativeFn function);
+ObjUpvalue* newUpvalue(Value* slot);
 ObjString* takeString(char* chars, int length);
 ObjString* copyString(const char* chars, int length);
 void printObject(Value value);

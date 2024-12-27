@@ -26,8 +26,17 @@ static Obj* allocateObject(size_t size, ObjType type) {
 
 // Allocate a new closure object and return its address.
 ObjClosure* newClosure(ObjFunction* function) {
+    ObjUpvalue** upvalues = ALLOCATE(ObjUpvalue*, function->upvalueCount);
+
+    for (int i = 0; i < function->upvalueCount; i++) {
+        upvalues[i] = NULL;
+    }
+
     ObjClosure* closure = ALLOCATE_OBJ(ObjClosure, OBJ_CLOSURE);
     closure->function = function;
+    closure->upvalues = upvalues;
+    closure->upvalueCount = function->upvalueCount;
+
     return closure;
 }
 
@@ -35,6 +44,7 @@ ObjClosure* newClosure(ObjFunction* function) {
 ObjFunction* newFunction() {
     ObjFunction* function = ALLOCATE_OBJ(ObjFunction, OBJ_FUNCTION);
     function->arity = 0;
+    function->upvalueCount = 0;
     function->name = NULL;
     initChunk(&function->chunk);
     return function;
@@ -45,6 +55,15 @@ ObjNative* newNative(NativeFn function) {
     ObjNative* native = ALLOCATE_OBJ(ObjNative, OBJ_NATIVE);
     native->function = function;
     return native;
+}
+
+// Create a new Upvalue object at runtime using the pointer provided.
+ObjUpvalue* newUpvalue(Value* slot) {
+    ObjUpvalue* upvalue = ALLOCATE_OBJ(ObjUpvalue, OBJ_UPVALUE);
+    upvalue->location = slot;
+    upvalue->next = NULL;
+    upvalue->closed = NULL_VAL;
+    return upvalue;
 }
 
 // Allocate a string object with the given data, add the ObjString to the
@@ -122,6 +141,9 @@ void printObject(Value value) {
             break;
         case OBJ_CLOSURE:
             printFunction(AS_CLOSURE(value)->function);
+            break;
+        case OBJ_UPVALUE:
+            printf("upvalue");
             break;
     }
 }

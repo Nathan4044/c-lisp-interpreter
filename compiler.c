@@ -25,23 +25,29 @@ typedef struct {
     // Ensures that the user isn't bombarded with error messages
     // for a single issue.
     bool panicMode;
+    // Used to track how deep into an s-expression the parser is.
     int lParenCount;
 } Parser;
 
-// Definition of the function signature used for parsing different expressions.
-typedef void (*ParseFn)();
-
 static void expression();
-
-static ParseFn getRule(TokenType type);
 
 // Local is the compiler's representation of a local variable that will exist
 // on the stack.
 typedef struct {
     Token name; // Contains the string of the variable name.
     int depth; // How deeply nested the variable is.
+    bool isCaptured; // If Local variable is captured as upvalue in closure.
 } Local;
 
+// Upvalue is a representation of a variable that has been captured from an
+// enclosing scope.
+typedef struct {
+    uint8_t index; // Into the function's list of upvalues.
+    bool isLocal; // If captured from immediately surrounding scope.
+} Upvalue;
+
+// FunctionType Describes whether we're compiling a function or top level 
+// script.
 typedef enum {
     TYPE_FUNCTION,
     TYPE_SCRIPT,
@@ -62,8 +68,9 @@ typedef struct Compiler {
     // function.
     FunctionType type; 
 
-    Local locals[UINT8_COUNT];
+    Local locals[UINT8_COUNT]; // Collection of local variables.
     int localCount;
+    Upvalue upvalues[UINT8_COUNT]; // Collection of Upvalues.
     int scopeDepth;
 } Compiler;
 
@@ -267,14 +274,19 @@ static void beginScope() {
     current->scopeDepth++;
 }
 
-// Remove one from the scope depth, and remove all local variables at the
-// removed scope.
+// Remove one from the scope depth, remove local variables at the
+// removed scope or capture them as upvalues if they're using in a subsequent
+// scope.
 static void endScope() {
     current->scopeDepth--;
 
     while (current->localCount > 0 &&
             current->locals[current->localCount - 1].depth > current->scopeDepth) {
-        emitByte(OP_POP);
+        if (current->locals[current->localCount - 1].isCaptured) {
+            emitByte(OP_CLOSE_UPVALUE);
+        } else {
+            emitByte(OP_POP);
+        }
         current->localCount--;
     }
 }
@@ -336,6 +348,11 @@ static void lambda() {
 
     ObjFunction* function = endCompiler();
     emitBytes(OP_CLOSURE, makeConstant(OBJ_VAL(function)));
+
+    for (int i = 0; i < function->upvalueCount; i++) {
+        emitByte(compiler.upvalues[i].isLocal ? 1 : 0);
+        emitByte(compiler.upvalues[i].index);
+    }
 }
 
 // Compile an if expression, with an optional else value (defaults to null).
@@ -607,14 +624,66 @@ static int resolveLocal(Compiler* compiler, Token* name) {
     return -1;
 }
 
+// Add a new Upvalue to the compiler's list and return the index.
+// If the variable is already captured then return its existing index.
+static int addUpvalue(Compiler* compiler, uint8_t index, bool isLocal) {
+    int upvalueCount = compiler->function->upvalueCount;
+
+    for (int i = 0; i < upvalueCount; i++) {
+        Upvalue* upvalue = &compiler->upvalues[i];
+        if (upvalue->index == index && upvalue->isLocal == isLocal) {
+            return i;
+        }
+    }
+
+    if (upvalueCount == UINT8_COUNT) {
+        error("Too many closure variables in function.");
+        return 0;
+    }
+
+    compiler->upvalues[upvalueCount].isLocal = isLocal;
+    compiler->upvalues[upvalueCount].index = index;
+    return compiler->function->upvalueCount++;
+}
+
+// Search for a variable with a name matching the provided token.
+// Begin by searching the enclosing scope, if none are found then recursively
+// search the scopes around that one. The variable that is captured from further
+// scopes is bubbled up as an Upvalue through each scope until the current one
+// is reached, so that each Upvalue forms a chain to the current innermost scope.
+static int resolveUpvalue(Compiler* compiler, Token* name) {
+    if (compiler->enclosing == NULL) return -1;
+
+    int local = resolveLocal(compiler->enclosing, name);
+    if (local != -1) {
+        compiler->enclosing->locals[local].isCaptured = true;
+        return addUpvalue(compiler, (uint8_t)local, true);
+    }
+
+    // Recursive call to enclosing function, allowing Upvalues to bubble up
+    // through enclosing scopes.
+    int upvalue = resolveUpvalue(compiler->enclosing, name);
+    if (upvalue != -1) {
+        return addUpvalue(compiler, (uint8_t)upvalue, false);
+    }
+
+    return -1;
+}
+
 // Add an OpCode to get the variable of the given token name and add it to the
 // stack. Try to find a variable with the matching name from the list of locals,
-// if none are found then assume the variable is a global.
+// if none are found then recursively search enclosing scopes for a matching
+// Upvalue to capture. If there is no matching local at any enclosing scope,
+// assume the variable is a global.
 static void namedVariable(Token name) {
-    uint8_t getOp = OP_GET_LOCAL;
     int arg = resolveLocal(current, &name);
+    uint8_t getOp;
 
-    if (arg == -1) {
+    if (arg != -1) {
+        getOp = OP_GET_LOCAL;
+    } else if ((arg = resolveUpvalue(current, &name)) != -1) {
+        getOp = OP_GET_UPVALUE;
+    } else {
         arg = identifierConstant(&name);
         getOp = OP_GET_GLOBAL;
     }
@@ -669,6 +738,7 @@ static int addLocal(Token name) {
     Local* local = &current->locals[current->localCount++];
     local->name = name;
     local->depth = current->scopeDepth;
+    local->isCaptured = false;
     return current->localCount - 1;
 }
 

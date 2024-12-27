@@ -18,6 +18,8 @@ typedef enum {
     OP_GET_GLOBAL,
     OP_DEFINE_LOCAL,
     OP_GET_LOCAL,
+    OP_GET_UPVALUE,
+    OP_CLOSE_UPVALUE,
     OP_JUMP_FALSE,
     OP_JUMP,
     OP_LOOP,
