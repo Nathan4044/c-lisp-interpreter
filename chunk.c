@@ -5,6 +5,7 @@
 #include "chunk.h"
 #include "memory.h"
 #include "value.h"
+#include "vm.h"
 
 // initChunk initialises all values of a Chunk to their correct zero value.
 void initChunk(Chunk *chunk) {
@@ -46,6 +47,8 @@ void freeChunk(Chunk *chunk) {
 
 // addConstant adds another constant to the provided Chunk.
 int addConstant(Chunk *chunk, Value value) {
+    push(value);
     writeValueArray(&chunk->constants, value);
+    pop();
     return chunk->constants.count - 1;
 }

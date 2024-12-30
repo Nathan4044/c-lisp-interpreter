@@ -162,3 +162,23 @@ ObjString* tableFindString(Table* table,
         index = (index + 1) % table->capacity;
     }
 }
+
+// Called during garbage collection and used on the Table of interned strings.
+// Delete any strings that haven't been marked as reachable.
+void tableRemoveWhite(Table *table) {
+    for (int i = 0; i < table->capacity; i++) {
+        Entry* entry = &table->entries[i];
+        if (entry->key != NULL && !entry->key->obj.isMarked) {
+            tableDelete(table, entry->key);
+        }
+    }
+}
+
+// Mark both the keys and values found in the provided Table.
+void markTable(Table *table) {
+    for (int i = 0; i < table->capacity; i++) {
+        Entry* entry = &table->entries[i];
+        markObject((Obj*)entry->key);
+        markValue(entry->value);
+    }
+}

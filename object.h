@@ -35,6 +35,9 @@ typedef enum {
 struct Obj {
     ObjType type;
 
+    // Whether the object been marked during garbage collection.
+    bool isMarked;
+
     // Instrusive list to keep track of all objects at runtime. Used to find
     // objects to clean up during garbage collection.
     struct Obj* next;

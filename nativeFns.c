@@ -211,7 +211,7 @@ bool printVals(int argCount, Value* args, Value* result) {
 
 bool strCat(int argCount, Value* args, Value* result) {
     int len = 1; // 1 for null terminator
-    char* str;
+    char str[30];
 
     for (int i = 0; i < argCount; i++) {
         Value v = args[i];

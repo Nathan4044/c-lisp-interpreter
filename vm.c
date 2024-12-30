@@ -71,6 +71,13 @@ void initVM() {
     initTable(&vm.strings);
     initTable(&vm.globals);
 
+    vm.greyCount = 0;
+    vm.greyCapacity = 0;
+    vm.greyStack = NULL;
+
+    vm.bytesAllocated = 0;
+    vm.nextGC = 1024 * 1024;
+
     defineNative("+", add);
     defineNative("*", multiply);
     defineNative("-", subtract);
