@@ -7,6 +7,7 @@
 typedef struct Obj Obj;
 typedef struct ObjString ObjString;
 
+// Enum to represent possible Value types.
 typedef enum {
     VAL_BOOL,
     VAL_NULL,
@@ -17,6 +18,9 @@ typedef enum {
 // Value represents a value instance in the VM.
 typedef struct {
     ValueType type;
+
+    // union of possible Value types, should be accessed via macros to ensure
+    // the correct type is used.
     union {
         bool boolean;
         double number;
@@ -24,15 +28,18 @@ typedef struct {
     } as;
 } Value;
 
+// Helper macros for confirming the type of a Value.
 #define IS_BOOL(value) ((value).type == VAL_BOOL)
 #define IS_NULL(value) ((value).type == VAL_NULL)
 #define IS_NUMBER(value) ((value).type == VAL_NUMBER)
 #define IS_OBJ(value) ((value).type == VAL_OBJ)
 
+// Helper macros to use a Value as a specific type.
 #define AS_BOOL(value) ((value).as.boolean)
 #define AS_NUMBER(value) ((value).as.number)
 #define AS_OBJ(value) ((value).as.obj)
 
+// Helper macros to construct a Value of a specific type.
 #define BOOL_VAL(value) ((Value){VAL_BOOL, {.boolean = value}})
 #define NULL_VAL ((Value){VAL_NULL, {.number = 0}})
 #define NUMBER_VAL(value) ((Value){VAL_NUMBER, {.number = value}})
@@ -40,8 +47,13 @@ typedef struct {
 
 // ValueArray is a dynamically allocated array of Values.
 typedef struct {
+    // Maximum slots in the current array.
     int capacity;
+
+    // Current number of Values in the array.
     int count;
+
+    // Pointer to the array of Values.
     Value* values;
 } ValueArray;
 

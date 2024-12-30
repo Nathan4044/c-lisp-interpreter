@@ -29,10 +29,19 @@ typedef enum {
 
 // A chunk is a container for constants and bytecode instructions.
 typedef struct {
+    // Number of bytes in code.
     int count;
+
+    // Capacity of code array.
     int capacity;
+
+    // Contains the bytecode that the VM will run.
     uint8_t* code;
+
+    // 1-1 mapped values to code, line number of corresponding byte.
     int* lines;
+
+    // Array of constant values in source code.
     ValueArray constants;
 } Chunk;
 

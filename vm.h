@@ -12,21 +12,49 @@
 #define FRAME_MAX 64
 #define STACK_MAX (FRAME_MAX * UINT8_COUNT)
 
+// Representation of an execution frame on the frame stack.
 typedef struct {
+    // Closure being executed in this Frame.
     ObjClosure* closure;
+
+    // Pointer to the current byte of the function bytecode that is being
+    // executed.
     uint8_t* ip;
+
+    // Pointer to the place on the VM stack where local values begin, used as
+    // the lowest point of the CallFrame's stack.
     Value* slots;
 } CallFrame;
 
 // A container for the state of the VM.
 typedef struct {
+    // Frame stack of the VM, to track depth of execution of functions
+    // during runtime.
     CallFrame frames[FRAME_MAX];
+
+    // The current number of frames actively used on the stack.
     int frameCount;
+
+    // The stack of Values being actively used by the execution of the VM.
     Value stack[STACK_MAX];
+
+    // Pointer to the last Value placed on the stack.
     Value* stackTop;
+
+    // Table of top-scope Values that are accessed via a call to the hash table.
     Table globals;
+
+    // Table of unique strings used by the VM. The Table here is used more like
+    // a set, with the key being the part of the entry that matters.
     Table strings;
+
+    // An intrusive list of all objects that have been created, used to find
+    // otherwise unreachable objects during garbage collection.
     Obj* objects;
+    
+    // An intrusive list of Values that are both captured from an enclosing
+    // scope, and not yet 'closed over' (taken off the stack and stored in
+    // the closure itself).
     ObjUpvalue* openUpvalues;
 } VM;
 

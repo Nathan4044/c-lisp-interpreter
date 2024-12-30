@@ -4,9 +4,11 @@
 #include "common.h"
 #include "object.h"
 
+// Helper macro to allocate memory via the reallocate function.
 #define ALLOCATE(type, count) \
     (type*)reallocate(NULL, 0, sizeof(type) * (count))
 
+// Helper macro to deallocate memory via the reallocate function.
 #define FREE(type, pointer) reallocate(pointer, sizeof(type), 0)
 
 // Simple macro for defining the growth of the capacity of a dynamically

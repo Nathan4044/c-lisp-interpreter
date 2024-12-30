@@ -16,10 +16,17 @@ typedef enum {
     TOKEN_ERROR, TOKEN_EOF
 } TokenType;
 
+// Scanned tokens that the scanner recognises as a distinct item.
 typedef struct {
     TokenType type;
+
+    // Pointer to where in the source code the Token string starts.
     const char* start;
+
+    // Number of characters in the token.
     int length;
+
+    // Line number of the characters in the token.
     int line;
 } Token;
 
