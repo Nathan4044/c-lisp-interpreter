@@ -4,6 +4,7 @@
 #include <time.h>
 
 #include "memory.h"
+#include "object.h"
 #include "value.h"
 #include "vm.h"
 
@@ -285,6 +286,133 @@ bool not_(int argCount, Value* args, Value* result) {
             return true;
         default:
             runtimeError("Attempted to call 'not' with more than one argument.");
+            return false;
+    }
+}
+
+bool list(int argCount, Value* args, Value* result) {
+    ObjList* list = newList();
+
+    for (int i = 0; i < argCount; i++) {
+        writeValueArray(&list->array, args[i]);
+    }
+
+    *result = OBJ_VAL(list);
+    return true;
+}
+
+bool push_(int argCount, Value* args, Value* result) {
+    if (argCount != 2) {
+        runtimeError(
+            "Attempted to call 'push' with incorrect number of arguments."
+        );
+        return false;
+    }
+
+    if (!IS_LIST(args[0])) {
+        runtimeError("Attempted to call 'push' on non-list object.");
+        return false;
+    }
+
+    ObjList* oldList = AS_LIST(args[0]);
+    ObjList* newlist = newList();
+
+    newlist->array.count = oldList->array.count;
+    newlist->array.capacity = oldList->array.capacity;
+    newlist->array.values = ALLOCATE(Value, newlist->array.capacity);
+
+    for (int i = 0; i < oldList->array.count; i++) {
+        newlist->array.values[i] = oldList->array.values[i];
+    }
+
+    writeValueArray(&newlist->array, args[1]);
+
+    *result = OBJ_VAL(newlist);
+    return true;
+}
+
+bool first(int argCount, Value* args, Value* result) {
+    if (argCount != 1) {
+        runtimeError(
+            "Attempted to call 'first' with incorrect number of arguments."
+        );
+        return false;
+    }
+
+    if (!IS_LIST(args[0])) {
+        runtimeError("Attempted to call 'first' on non-list object.");
+        return false;
+    }
+
+    ObjList* list = AS_LIST(args[0]);
+
+    if (list->array.count > 0) {
+        *result = list->array.values[0];
+    }
+
+    return true;
+}
+
+bool rest(int argCount, Value* args, Value* result) {
+    if (argCount != 1) {
+        runtimeError(
+            "Attempted to call 'rest' with incorrect number of arguments."
+        );
+        return false;
+    }
+
+    if (!IS_LIST(args[0])) {
+        runtimeError("Attempted to call 'rest' on non-list object.");
+        return false;
+    }
+
+    ObjList* oldList = AS_LIST(args[0]);
+
+    switch (oldList->array.count) {
+        case 0:
+            return true;
+        case 1:
+            *result = OBJ_VAL(newList());
+            return true;
+    }
+
+    ObjList* newlist = newList();
+    newlist->array.capacity = oldList->array.capacity;
+    newlist->array.count = oldList->array.count - 1;
+    newlist->array.values = ALLOCATE(Value, newlist->array.capacity);
+
+    for (int i = 0; i < newlist->array.count; i++) {
+        newlist->array.values[i] = oldList->array.values[i+1];
+    }
+
+    *result = OBJ_VAL(newlist);
+    return true;
+}
+
+bool len(int argCount, Value* args, Value* result) {
+    if (argCount != 1) {
+        runtimeError(
+            "Attempted to call 'len' with incorrect number of arguments."
+        );
+        return false;
+    }
+
+    if (!IS_OBJ(args[0])) {
+        runtimeError("Attempted to call 'len' on incompatible type.");
+        return false;
+    }
+
+    switch (AS_OBJ(args[0])->type) {
+        case OBJ_LIST: {
+            *result = NUMBER_VAL(AS_LIST(args[0])->array.count);
+            return true;
+        }
+        case OBJ_STRING: {
+            *result = NUMBER_VAL(AS_STRING(args[0])->length);
+            return true;
+        }
+        default:
+            runtimeError("Attempted to call 'len' on incompatible type.");
             return false;
     }
 }

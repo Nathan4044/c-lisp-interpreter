@@ -125,6 +125,12 @@ ObjString* copyString(const char* chars, int length) {
     return allocateString(heapChars, length, hash);
 }
 
+ObjList* newList() {
+    ObjList* list = ALLOCATE_OBJ(ObjList, OBJ_LIST);
+    initValueArray(&list->array);
+    return list;
+}
+
 // Print a string prepresentation of a function.
 static void printFunction(ObjFunction* function) {
     if (function->name == NULL) {
@@ -153,5 +159,14 @@ void printObject(Value value) {
         case OBJ_UPVALUE:
             printf("upvalue");
             break;
+        case OBJ_LIST: {
+            ObjList* list = AS_LIST(value);
+            printf("[ ");
+            for (int i = 0; i < list->array.count; i++) {
+                printValue(list->array.values[i]);
+                printf(" ");
+            }
+            printf("]");
+        }
     }
 }

@@ -89,6 +89,11 @@ void initVM() {
     defineNative("print", printVals);
     defineNative("str", strCat);
     defineNative("not", not_);
+    defineNative("list", list);
+    defineNative("push", push_);
+    defineNative("first", first);
+    defineNative("rest", rest);
+    defineNative("len", len);
 }
 
 // Free all allocated memory associated with the VM.

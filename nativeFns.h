@@ -12,3 +12,8 @@ bool printVals(int argCount, Value* args, Value* result);
 bool strCat(int argCount, Value* args, Value* result);
 bool subtract(int argCount, Value* args, Value* result);
 bool not_(int argCount, Value* args, Value* result);
+bool list(int argCount, Value* args, Value* result);
+bool push_(int argCount, Value* args, Value* result);
+bool first(int argCount, Value* args, Value* result);
+bool rest(int argCount, Value* args, Value* result);
+bool len(int argCount, Value* args, Value* result);

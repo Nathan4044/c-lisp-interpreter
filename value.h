@@ -6,6 +6,7 @@
 // Forward declarations of objects to prevent cyclical dependencies.
 typedef struct Obj Obj;
 typedef struct ObjString ObjString;
+typedef struct ObjList ObjList;
 
 // Enum to represent possible Value types.
 typedef enum {

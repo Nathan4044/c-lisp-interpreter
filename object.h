@@ -13,6 +13,7 @@
 #define IS_FUNCTION(value) isObjType(value, OBJ_FUNCTION)
 #define IS_NATIVE(value) isObjType(value, OBJ_NATIVE)
 #define IS_STRING(value) isObjType(value, OBJ_STRING)
+#define IS_LIST(value) isObjType(value, OBJ_LIST)
 
 // Helper macros to convert an object to a specific type.
 #define AS_CLOSURE(value) ((ObjClosure*)AS_OBJ(value))
@@ -20,10 +21,12 @@
 #define AS_NATIVE(value) (((ObjNative*)AS_OBJ(value))->function)
 #define AS_STRING(value) ((ObjString*)AS_OBJ(value))
 #define AS_CSTRING(value) (((ObjString*)AS_OBJ(value))->chars)
+#define AS_LIST(value) ((ObjList*)AS_OBJ(value))
 
 // Simple enum for identifying the type of an object.
 typedef enum {
     OBJ_STRING,
+    OBJ_LIST,
     OBJ_FUNCTION,
     OBJ_CLOSURE,
     OBJ_NATIVE,
@@ -74,11 +77,24 @@ typedef struct {
 // A string object.
 struct ObjString {
     Obj obj;
-    int length; // Number of chars.
-    char* chars; // Start of the string's characters, not null-terminated. 
+
+    // Number of chars.
+    int length;
+
+    // Start of the string's characters, not null-terminated. 
+    char* chars;
+
     // Hash calculated from the string's value, used for equality checks and
     // enables string interning (only one instance of identical strings).
     uint32_t hash;
+};
+
+// A list object.
+struct ObjList {
+    Obj obj;
+
+    // Dynamically allocated array of Values in list.
+    ValueArray array;
 };
 
 // ObjUpvalue is the runtime representation of a variable that has been lifted
@@ -124,6 +140,7 @@ ObjUpvalue* newUpvalue(Value* slot);
 ObjString* takeString(char* chars, int length);
 ObjString* copyString(const char* chars, int length);
 void printObject(Value value);
+ObjList* newList();
 
 // Return true if Value is an Object and has the matching Object type.
 static inline bool isObjType(Value value, ObjType type) {
