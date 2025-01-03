@@ -28,7 +28,7 @@ void writeValueArray(ValueArray *array, Value value) {
 
 // freeValueArray frees any allocated memory associated with a ValueArray.
 void freeValueArray(ValueArray *array) {
-    free(array->values);
+    FREE_ARRAY(Value, array->values, array->capacity);
     initValueArray(array);
 }
 
