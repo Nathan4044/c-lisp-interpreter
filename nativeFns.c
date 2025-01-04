@@ -87,7 +87,13 @@ bool divide(int argCount, Value* args, Value* result) {
                 runtimeError("Operand must be a number.");
                 return false;
             }
-            *result = NUMBER_VAL(-(AS_NUMBER(args[0])));
+
+            if (AS_NUMBER(args[0]) == 0) {
+                runtimeError("Cannot divide by zero.");
+                return false;
+            }
+
+            *result = NUMBER_VAL(1 / AS_NUMBER(args[0]));
             return true;
         default: {
             if (!IS_NUMBER(args[0])) {
