@@ -28,7 +28,13 @@ void freeTable(Table *table) {
 // value with the matching key. Then returning either the matching entry, the
 // first tombstone encountered, or the first empty slot.
 static Entry* findEntry(Entry* entries, int capacity, Value key, uint32_t hash) {
-    uint32_t index = hash % capacity;
+    // Bitwise and of the hash value and 1 less than the Table's capacity.
+    //
+    // For capacities that are powers of 2, this is equivalent to:
+    // uint32_t index = hash % capacity;
+    // But significantly more CPU efficient (modulo is slow).
+    uint32_t index = hash & (capacity - 1);
+
     Entry* tombstone = NULL;
 
     for (;;) {
@@ -48,7 +54,8 @@ static Entry* findEntry(Entry* entries, int capacity, Value key, uint32_t hash) 
             return entry;
         }
 
-        index = (index + 1) % capacity;
+        // Faster than modulo for powers of two. See index declaration.
+        index = (index + 1) & (capacity - 1);
     }
 }
 
@@ -183,7 +190,13 @@ ObjString* tableFindString(Table* table,
         const char* chars, int length, uint32_t hash) {
     if (table->count == 0) return NULL;
 
-    uint32_t index = hash % table->capacity;
+    // Bitwise and of the hash value and 1 less than the Table's capacity.
+    //
+    // For capacities that are powers of 2, this is equivalent to:
+    // uint32_t index = hash % table->capacity;
+    // But significantly more CPU efficient (modulo is slow).
+    uint32_t index = hash & (table->capacity - 1);
+
     for (;;) {
         Entry* entry = &table->entries[index];
 
@@ -202,7 +215,8 @@ ObjString* tableFindString(Table* table,
             }
         }
 
-        index = (index + 1) % table->capacity;
+        // Faster than modulo for powers of two. See index declaration.
+        index = (index + 1) & (table->capacity - 1);
     }
 }
 
