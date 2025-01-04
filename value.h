@@ -7,6 +7,7 @@
 typedef struct Obj Obj;
 typedef struct ObjString ObjString;
 typedef struct ObjList ObjList;
+typedef struct ObjDict ObjDict;
 
 // Enum to represent possible Value types.
 typedef enum {
@@ -62,6 +63,7 @@ bool valuesEqual(Value a, Value b);
 void initValueArray(ValueArray* array);
 void writeValueArray(ValueArray* array, Value value);
 void freeValueArray(ValueArray* array);
+char* valueType(Value value);
 
 void printValue(Value value);
 

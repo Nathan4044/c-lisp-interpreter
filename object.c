@@ -79,7 +79,7 @@ static ObjString* allocateString(char* chars, int length, uint32_t hash) {
     string->hash = hash;
 
     push(OBJ_VAL(string));
-    tableSet(&vm.strings, string, NULL_VAL);
+    tableSet(&vm.strings, OBJ_VAL(string), NULL_VAL);
     pop();
 
     return string;
@@ -131,6 +131,12 @@ ObjList* newList() {
     return list;
 }
 
+ObjDict* newDict() {
+    ObjDict* dict = ALLOCATE_OBJ(ObjDict, OBJ_DICT);
+    initTable(&dict->table);
+    return dict;
+}
+
 // Print a string prepresentation of a function.
 static void printFunction(ObjFunction* function) {
     if (function->name == NULL) {
@@ -167,6 +173,21 @@ void printObject(Value value) {
                 printf(" ");
             }
             printf("]");
+        }
+        case OBJ_DICT: {
+            ObjDict* dict = AS_DICT(value);
+            printf("{ ");
+            for (int i = 0; i < dict->table.capacity; i++) {
+                Entry entry = dict->table.entries[i];
+
+                if (!IS_NULL(entry.key)) {
+                    printValue(entry.key);
+                    printf(" => ");
+                    printValue(entry.value);
+                    printf(" ");
+                }
+            }
+            printf("}");
         }
     }
 }

@@ -58,7 +58,7 @@ void runtimeError(const char* format, ...) {
 static void defineNative(const char* name, NativeFn function) {
     push(OBJ_VAL(copyString(name, (int)strlen(name))));
     push(OBJ_VAL(newNative(function)));
-    tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
+    tableSet(&vm.globals, vm.stack[0], vm.stack[1]);
     pop();
     pop();
 }
@@ -89,11 +89,18 @@ void initVM() {
     defineNative("print", printVals);
     defineNative("str", strCat);
     defineNative("not", not_);
+
+    // List related builtins
     defineNative("list", list);
     defineNative("push", push_);
     defineNative("first", first);
     defineNative("rest", rest);
     defineNative("len", len);
+
+    // Dict related builtins
+    defineNative("dict", dict);
+    defineNative("set", set);
+    defineNative("get", get);
 }
 
 // Free all allocated memory associated with the VM.
@@ -249,14 +256,14 @@ static InterpretResult run() {
                 break;
             case OP_DEFINE_GLOBAL: {
                 ObjString* name = READ_STRING();
-                tableSet(&vm.globals, name, peek(0));
+                tableSet(&vm.globals, OBJ_VAL(name), peek(0));
                 break;
             }
             case OP_GET_GLOBAL: {
                 ObjString* name = READ_STRING();
                 Value value;
 
-                if (!tableGet(&vm.globals, name, &value)) {
+                if (!tableGet(&vm.globals, OBJ_VAL(name), &value)) {
                     runtimeError("Undefined variable '%s'.", name->chars);
                     return INTERPRET_RUNTIME_ERROR;
                 }

@@ -1,10 +1,12 @@
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
 
 #include "memory.h"
 #include "object.h"
+#include "table.h"
 #include "value.h"
 #include "vm.h"
 
@@ -415,4 +417,77 @@ bool len(int argCount, Value* args, Value* result) {
             runtimeError("Attempted to call 'len' on incompatible type.");
             return false;
     }
+}
+
+bool dict(int argCount, Value* args, Value* result) {
+    if (argCount % 2 != 0) {
+        runtimeError("Dict definition must have a value for every key.");
+        return false;
+    }
+
+    ObjDict* dict = newDict();
+
+    for (int i = 0; i < argCount - 1; i += 2) {
+        uint32_t hash;
+        if (!hashOf(&args[i], &hash)) {
+            runtimeError("Invalid Dict key type: %s.", valueType(args[i]));
+            return false;
+        }
+
+        tableSet(&dict->table, args[i], args[i+1]);
+    }
+
+    *result = OBJ_VAL(dict);
+    return true;
+}
+
+bool set(int argCount, Value* args, Value* result) {
+    if (argCount != 3) {
+        runtimeError("Attempted to call 'set' with wrong number of arguments.");
+        return false;
+    }
+
+    if (!IS_DICT(args[0])) {
+        runtimeError("Cannot call set on non-dict type.");
+        return false;
+    }
+
+    uint32_t hash;
+    if (!hashOf(&args[1], &hash)) {
+        runtimeError("Invalid Dict key type: %s.", valueType(args[1]));
+        return false;
+    }
+
+    ObjDict* dict = newDict();
+
+    tableAddAll(&AS_DICT(args[0])->table, &dict->table);
+    tableSet(&dict->table, args[1], args[2]);
+
+    *result = OBJ_VAL(dict);
+    return true;
+}
+
+bool get(int argCount, Value* args, Value* result) {
+    if (argCount != 2) {
+        runtimeError("Attempted to call 'get' with wrong number of arguments.");
+        return false;
+    }
+
+    if (!IS_DICT(args[0])) {
+        runtimeError("Cannot call get on non-dict type.");
+        return false;
+    }
+
+    uint32_t hash;
+    if (!hashOf(&args[1], &hash)) {
+        runtimeError("Invalid Dict key type: %s.", valueType(args[1]));
+        return false;
+    }
+
+    Value got;
+    if (tableGet(&AS_DICT(args[0])->table, args[1], &got)) {
+        *result = got;
+    }
+
+    return true;
 }

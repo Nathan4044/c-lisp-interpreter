@@ -44,6 +44,26 @@ void printValue(Value value) {
     }
 }
 
+char* valueType(Value value) {
+    switch (value.type) {
+        case VAL_BOOL: return "bool";
+        case VAL_NULL: return "null";
+        case VAL_NUMBER: return "number";
+        case VAL_OBJ: {
+            Obj* obj = AS_OBJ(value);
+            switch (obj->type) {
+                case OBJ_DICT: return "dict";
+                case OBJ_STRING: return "string";
+                case OBJ_FUNCTION: return "function";
+                case OBJ_CLOSURE: return "closure";
+                case OBJ_LIST: return "list";
+                case OBJ_UPVALUE: return "upvalue";
+                case OBJ_NATIVE: return "native fn";
+            }
+        }
+    }
+}
+
 // Checks is two given values are the same, based on their types.
 bool valuesEqual(Value a, Value b) {
     if (a.type != b.type) return false;

@@ -115,6 +115,15 @@ static void blackenObject(Obj* object) {
             }
             break;
         }
+        case OBJ_DICT: {
+            ObjDict* dict = (ObjDict*)object;
+            for (int i = 0; i < dict->table.capacity; i++) {
+                Entry entry = dict->table.entries[i];
+                markValue(entry.key);
+                markValue(entry.value);
+            }
+            break;
+        }
         case OBJ_NATIVE:
         case OBJ_STRING:
             break;
@@ -156,6 +165,12 @@ static void freeObject(Obj* object) {
             ObjList* list = (ObjList*)object;
             initValueArray(&list->array);
             FREE(ObjList, list);
+            break;
+        }
+        case OBJ_DICT: {
+            ObjDict* dict = (ObjDict*)object;
+            initTable(&dict->table);
+            FREE(ObjDict, dict);
             break;
         }
     }
