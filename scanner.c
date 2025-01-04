@@ -1,6 +1,7 @@
-#include "scanner.h"
 #include <string.h>
 #include <stdbool.h>
+
+#include "scanner.h"
 
 // holds the data required by the scanner for scanning tokens.
 typedef struct {
@@ -214,6 +215,7 @@ Token scanToken() {
         case ')': return makeToken(TOKEN_RIGHT_PAREN);
         case '{': return makeToken(TOKEN_LEFT_BRACE);
         case '}': return makeToken(TOKEN_RIGHT_BRACE);
+        case '-': if (isDigit(peek())) return number(); break;
         case '\'': return makeToken(TOKEN_QUOTE);
         case '"': return string();
     }

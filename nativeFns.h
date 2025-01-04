@@ -12,6 +12,7 @@ bool printVals(int argCount, Value* args, Value* result);
 bool strCat(int argCount, Value* args, Value* result);
 bool subtract(int argCount, Value* args, Value* result);
 bool not_(int argCount, Value* args, Value* result);
+bool rem(int argCount, Value* args, Value* result);
 
 // List related builtins
 bool list(int argCount, Value* args, Value* result);

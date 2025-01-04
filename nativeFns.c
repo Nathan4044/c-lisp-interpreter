@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -146,6 +147,32 @@ bool divide(int argCount, Value* args, Value* result) {
             return true;
         }
     }
+}
+
+// Equivalent to % operator in lua.
+//
+// Returns the remainder when the first Value is divided by the second Value.
+// The result is signed the same as the second argument.
+bool rem(int argCount, Value* args, Value* result) {
+    if (argCount != 2) {
+        runtimeError("Attempted to call 'rem' with wrong number of arguments.");
+        return false;
+    }
+
+    if (!IS_NUMBER(args[0]) || !IS_NUMBER(args[1])) {
+        runtimeError("Attempted to call 'rem' with non-number.");
+        return false;
+    }
+
+    double answer = remainder(AS_NUMBER(args[0]), AS_NUMBER(args[1]));
+    if (answer < 0) answer *= -1;
+
+    if (AS_NUMBER(args[1]) < 0) {
+        answer *= -1;
+    }
+
+    *result = NUMBER_VAL(answer);
+    return true;
 }
 
 // Ensure all Values are greater than the following one.

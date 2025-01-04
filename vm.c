@@ -82,6 +82,7 @@ void initVM() {
     defineNative("*", multiply);
     defineNative("-", subtract);
     defineNative("/", divide);
+    defineNative("rem", rem);
     defineNative("<", less);
     defineNative(">", greater);
     defineNative("=", equal);
