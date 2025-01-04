@@ -173,6 +173,7 @@ void printObject(Value value) {
                 printf(" ");
             }
             printf("]");
+            break;
         }
         case OBJ_DICT: {
             ObjDict* dict = AS_DICT(value);
@@ -188,6 +189,7 @@ void printObject(Value value) {
                 }
             }
             printf("}");
+            break;
         }
     }
 }
