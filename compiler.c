@@ -47,7 +47,7 @@ typedef struct {
     bool isLocal; // If captured from immediately surrounding scope.
 } Upvalue;
 
-// FunctionType Describes whether we're compiling a function or top level 
+// FunctionType Describes whether we're compiling a function or top level
 // script.
 typedef enum {
     TYPE_FUNCTION,
@@ -67,7 +67,7 @@ typedef struct Compiler {
     ObjFunction* function;
     // Indicates whether the compiler is compiling the script or an individual
     // function.
-    FunctionType type; 
+    FunctionType type;
 
     Local locals[UINT8_COUNT]; // Collection of local variables.
     int localCount;
@@ -179,7 +179,7 @@ static int emitJump(uint8_t instruction) {
     return currentChunk()->count - 2;
 }
 
-// Replace the jump instruction at the provided offset with the current 
+// Replace the jump instruction at the provided offset with the current
 // location.
 static void patchJump(int offset) {
     // -2 to get before the jump offset operand
@@ -527,7 +527,7 @@ static void call() {
 
         argCount++;
     }
-    
+
     emitBytes(OP_CALL, argCount);
 }
 
@@ -799,6 +799,8 @@ static void defineVariable(uint8_t index) {
     emitBytes(setOp, index);
 }
 
+// Allows dict objects to be defined in code with brace syntax, so that
+// { k1 v1 k2 v2 } is equivalent to (dict k1 v1 k2 v2).
 static void callDict() {
     Token dict;
     dict.line = parser.previous.line;
@@ -842,6 +844,9 @@ ObjFunction* compile(const char* source) {
     return parser.hadError ? NULL : function;
 }
 
+// To ensure no values are cleaned up by the garbage collector during
+// compilation. Marks the function currently being compiled and any enclosing
+// functions.
 void markCompilerRoots() {
     Compiler* compiler = current;
 

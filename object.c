@@ -125,12 +125,14 @@ ObjString* copyString(const char* chars, int length) {
     return allocateString(heapChars, length, hash);
 }
 
+// Allocate a new list object and initialise its fields.
 ObjList* newList() {
     ObjList* list = ALLOCATE_OBJ(ObjList, OBJ_LIST);
     initValueArray(&list->array);
     return list;
 }
 
+// Allocate a new dict object and initialise its fields.
 ObjDict* newDict() {
     ObjDict* dict = ALLOCATE_OBJ(ObjDict, OBJ_DICT);
     initTable(&dict->table);

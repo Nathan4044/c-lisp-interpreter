@@ -237,7 +237,7 @@ static InterpretResult run() {
             printf(" ]");
         }
         printf("\n");
-        
+
         disassembleInstruction(&frame->closure->function->chunk,
                 (int)(frame->ip - frame->closure->function->chunk.code));
 #endif
@@ -287,7 +287,7 @@ static InterpretResult run() {
                 push(*frame->closure->upvalues[slot]->location);
                 break;
             }
-            case OP_CLOSE_UPVALUE: 
+            case OP_CLOSE_UPVALUE:
                 closeUpvalues(vm.stackTop - 1);
                 pop();
                 break;
@@ -324,7 +324,7 @@ static InterpretResult run() {
                     uint8_t index = READ_BYTE();
 
                     if (isLocal) {
-                        closure->upvalues[i] = 
+                        closure->upvalues[i] =
                             captureUpvalue(frame->slots + index);
                     } else {
                         closure->upvalues[i] = frame->closure->upvalues[index];
@@ -360,7 +360,7 @@ static InterpretResult run() {
 #undef READ_BYTE
 }
 
-// The given source code is compiled to bytecode and stored in a top-level 
+// The given source code is compiled to bytecode and stored in a top-level
 // function. If there are no compilation errors, the returned function is then
 // executed on the VM.
 InterpretResult interpret(const char* source) {

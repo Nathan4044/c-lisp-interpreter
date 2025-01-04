@@ -86,7 +86,7 @@ struct ObjString {
     // Number of chars.
     int length;
 
-    // Start of the string's characters, not null-terminated. 
+    // Start of the string's characters, not null-terminated.
     char* chars;
 
     // Hash calculated from the string's value, used for equality checks and
@@ -133,7 +133,7 @@ typedef struct ObjUpvalue {
 // A representation of a closure. Wraps a function object and any values
 // captured from the enclosing scopes.
 typedef struct {
-    Obj obj; 
+    Obj obj;
 
     // Function that is called when the Closure is called.
     ObjFunction* function;

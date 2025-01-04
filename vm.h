@@ -51,7 +51,7 @@ typedef struct {
     // An intrusive list of all objects that have been created, used to find
     // otherwise unreachable objects during garbage collection.
     Obj* objects;
-    
+
     // An intrusive list of Values that are both captured from an enclosing
     // scope, and not yet 'closed over' (taken off the stack and stored in
     // the closure itself).

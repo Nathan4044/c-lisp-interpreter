@@ -16,6 +16,7 @@ bool clockNative(int argCount, Value* args, Value* result) {
     return true;
 }
 
+// Add up all numbers passed to +. Throws error when non-number types are given.
 bool add(int argCount, Value* args, Value* result) {
     double total = 0;
 
@@ -31,6 +32,8 @@ bool add(int argCount, Value* args, Value* result) {
     return true;
 }
 
+// Multiply togather all numbers passed to *. Throws error when non-number types
+// are given.
 bool multiply(int argCount, Value* args, Value* result) {
     double total = 1;
 
@@ -47,6 +50,16 @@ bool multiply(int argCount, Value* args, Value* result) {
     return true;
 }
 
+// Functionality changed depending on how many Values are passed in:
+//
+// If 1 Value is passed in, negate it and return it.
+//
+// If more than 1 Value is passed in, the first Value is taken as the base, then
+// the remaining values are subtracted from it. Once all Values have been
+// subtracted, return what remains.
+//
+// Throws an error if no Values are provided, or if one of the arguments is not
+// a number.
 bool subtract(int argCount, Value* args, Value* result) {
     switch (argCount) {
         case 0:
@@ -77,6 +90,17 @@ bool subtract(int argCount, Value* args, Value* result) {
     }
 }
 
+// Functionality changed depending on how many Values are passed in:
+//
+// If 1 Value is passed in, make a fraction of 1 over the given Value.
+// e.g. (/ 4) results in 0.25
+//
+// If more than 1 Value is passed in, the first Value is taken as the base, then
+// the remaining values are used to divide it. Once all Values have been used,
+// return what remains.
+//
+// Throws an error if no Values are provided, or if one of the arguments is not
+// a number.
 bool divide(int argCount, Value* args, Value* result) {
     switch (argCount) {
         case 0:
@@ -124,6 +148,9 @@ bool divide(int argCount, Value* args, Value* result) {
     }
 }
 
+// Ensure all Values are greater than the following one.
+//
+// Error thrown if there are no arguments, or if any argument is not a number.
 bool greater(int argCount, Value* args, Value* result) {
     bool isGreater = true;
 
@@ -159,6 +186,9 @@ bool greater(int argCount, Value* args, Value* result) {
     return true;
 }
 
+// Ensure all Values are less than the following one.
+//
+// Error thrown if there are no arguments, or if any argument is not a number.
 bool less(int argCount, Value* args, Value* result) {
     bool isLess = true;
 
@@ -194,6 +224,7 @@ bool less(int argCount, Value* args, Value* result) {
     return true;
 }
 
+// Returns true if all Values passed as argument are equivalent.
 bool equal(int count, Value* args, Value* result) {
     bool areEqual = true;
     for (int i = 0; i < count - 1; i++) {
@@ -207,6 +238,7 @@ bool equal(int count, Value* args, Value* result) {
     return true;
 }
 
+// Print all Values given, separated by a space. Returns null.
 bool printVals(int argCount, Value* args, Value* result) {
     for (int i = 0; i < argCount; i++) {
         printValue(args[i]);
@@ -218,6 +250,8 @@ bool printVals(int argCount, Value* args, Value* result) {
     return true;
 }
 
+// Create a string of all the Values passed to the function, separated by a
+// space, and returns it.
 bool strCat(int argCount, Value* args, Value* result) {
     int len = 1; // 1 for null terminator
     char str[30];
@@ -284,6 +318,7 @@ bool strCat(int argCount, Value* args, Value* result) {
     return true;
 }
 
+// Return false if Value evaluates to true, return false otherwise.
 bool not_(int argCount, Value* args, Value* result) {
     switch (argCount) {
         case 0:
@@ -298,6 +333,7 @@ bool not_(int argCount, Value* args, Value* result) {
     }
 }
 
+// Return a List object containing all Values passed in to the function.
 bool list(int argCount, Value* args, Value* result) {
     ObjList* list = newList();
 
@@ -309,6 +345,8 @@ bool list(int argCount, Value* args, Value* result) {
     return true;
 }
 
+// Return a new list, containing all the values of the list passed in and with
+// the new Value appended to it.
 bool push_(int argCount, Value* args, Value* result) {
     if (argCount != 2) {
         runtimeError(
@@ -339,6 +377,7 @@ bool push_(int argCount, Value* args, Value* result) {
     return true;
 }
 
+// Return the first item of the provided list, null if list is empty.
 bool first(int argCount, Value* args, Value* result) {
     if (argCount != 1) {
         runtimeError(
@@ -361,6 +400,7 @@ bool first(int argCount, Value* args, Value* result) {
     return true;
 }
 
+// Return a new list containing all but the first element of the provided list.
 bool rest(int argCount, Value* args, Value* result) {
     if (argCount != 1) {
         runtimeError(
@@ -397,6 +437,7 @@ bool rest(int argCount, Value* args, Value* result) {
     return true;
 }
 
+// Return the length of the provided string or list.
 bool len(int argCount, Value* args, Value* result) {
     if (argCount != 1) {
         runtimeError(
@@ -425,6 +466,8 @@ bool len(int argCount, Value* args, Value* result) {
     }
 }
 
+// Create and return a new Dict object, with each 2 passed in Values used as
+// key/value pairs.
 bool dict(int argCount, Value* args, Value* result) {
     if (argCount % 2 != 0) {
         runtimeError("Dict definition must have a value for every key.");
@@ -447,6 +490,10 @@ bool dict(int argCount, Value* args, Value* result) {
     return true;
 }
 
+// Return a new Dict, which is a copy of the provided Dict along with a new 
+// Entry constructed of the two provided Values as a key/value pair.
+//
+// If the key already exists in the provided Dict, overwrite its value.
 bool set(int argCount, Value* args, Value* result) {
     if (argCount != 3) {
         runtimeError("Attempted to call 'set' with wrong number of arguments.");
@@ -473,6 +520,8 @@ bool set(int argCount, Value* args, Value* result) {
     return true;
 }
 
+// Return the Value from the given Dict that's associated with the provided key.
+// Return null if the key is not found.
 bool get(int argCount, Value* args, Value* result) {
     if (argCount != 2) {
         runtimeError("Attempted to call 'get' with wrong number of arguments.");
