@@ -4,7 +4,7 @@
 typedef enum {
     // single character tokens
     TOKEN_LEFT_PAREN, TOKEN_RIGHT_PAREN,
-    TOKEN_LEFT_BRACE, TOKEN_RIGHT_BRACE,
+    TOKEN_LEFT_BRACE, TOKEN_RIGHT_BRACE, TOKEN_QUOTE,
     // literals
     TOKEN_IDENTIFIER, TOKEN_STRING, TOKEN_NUMBER,
     // keywords

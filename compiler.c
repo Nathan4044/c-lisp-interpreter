@@ -583,11 +583,23 @@ static void string() {
 }
 
 static void variable();
+static void callDict();
 
 // Internal function for parsing all forms of expression.
 static void parseExpression() {
     switch(parser.previous.type) {
+        case TOKEN_QUOTE:
+            if (parser.current.type == TOKEN_LEFT_PAREN) {
+                parser.previous.type = TOKEN_LEFT_PAREN;
+                parser.current.type = TOKEN_IDENTIFIER;
+                parser.current.start = "list";
+                parser.current.length = 4;
+            } else {
+                error("Expect '(' after '''.");
+                break;
+            }
         case TOKEN_LEFT_PAREN: sExpression(); break;
+        case TOKEN_LEFT_BRACE: callDict(); break;
         case TOKEN_IDENTIFIER: variable(); break;
         case TOKEN_STRING: string(); break;
         case TOKEN_NUMBER: number(); break;
@@ -785,6 +797,28 @@ static void defineVariable(uint8_t index) {
     }
 
     emitBytes(setOp, index);
+}
+
+static void callDict() {
+    Token dict;
+    dict.line = parser.previous.line;
+    dict.start = "dict";
+    dict.length = 4;
+    dict.type = TOKEN_IDENTIFIER;
+
+    namedVariable(dict);
+
+    uint16_t argCount = 0;
+    while (!match(TOKEN_RIGHT_BRACE)) {
+        expression();
+        argCount++;
+
+        if (argCount > UINT8_COUNT) {
+            error("Too many arguments in dictionary declaration.");
+        }
+    }
+
+    emitBytes(OP_CALL, (uint8_t)argCount);
 }
 
 // Compile takes a string of source code, scans the tokens, and compiles them
