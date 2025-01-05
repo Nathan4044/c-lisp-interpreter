@@ -34,6 +34,17 @@ void freeValueArray(ValueArray *array) {
 
 // printValue prints a human-readable representation of a Value.
 void printValue(Value value) {
+#ifdef NAN_BOXING
+    if (IS_BOOL(value)) {
+        printf(AS_BOOL(value) ? "true" : "false");
+    } else if (IS_NULL(value)) {
+        printf("null");
+    } else if (IS_NUMBER(value)) {
+        printf("%g", AS_NUMBER(value));
+    } else if (IS_OBJ(value)) {
+        printObject(value);
+    }
+#else
     switch (value.type) {
         case VAL_BOOL:
             printf(AS_BOOL(value) ? "true" : "false");
@@ -42,9 +53,29 @@ void printValue(Value value) {
         case VAL_NUMBER: printf("%g", AS_NUMBER(value)); break;
         case VAL_OBJ: printObject(value); break;
     }
+#endif
 }
 
+// Returns the Value's type as a string.
 char* valueType(Value value) {
+#ifdef NAN_BOXING
+    if (IS_BOOL(value)) return "bool";
+    if (IS_NULL(value)) return "null";
+    if (IS_NUMBER(value)) return "number";
+    if (IS_OBJ(value)) {
+        Obj* obj = AS_OBJ(value);
+        switch (obj->type) {
+            case OBJ_DICT: return "dict";
+            case OBJ_STRING: return "string";
+            case OBJ_FUNCTION: return "function";
+            case OBJ_CLOSURE: return "closure";
+            case OBJ_LIST: return "list";
+            case OBJ_UPVALUE: return "upvalue";
+            case OBJ_NATIVE: return "native fn";
+        }
+    }
+    return "unreachable";
+#else
     switch (value.type) {
         case VAL_BOOL: return "bool";
         case VAL_NULL: return "null";
@@ -62,10 +93,18 @@ char* valueType(Value value) {
             }
         }
     }
+#endif
 }
 
 // Checks is two given values are the same, based on their types.
 bool valuesEqual(Value a, Value b) {
+#ifdef NAN_BOXING
+    // Ensures that non-quiet NAN values are compared to each other as doubles.
+    if (IS_NUMBER(a) && IS_NUMBER(b)) {
+        return AS_NUMBER(a) == AS_NUMBER(b);
+    }
+    return a == b;
+#else
     if (a.type != b.type) return false;
 
     switch (a.type) {
@@ -75,4 +114,5 @@ bool valuesEqual(Value a, Value b) {
         case VAL_OBJ: return AS_OBJ(a) == AS_OBJ(b);
         default: return false;
     }
+#endif
 }

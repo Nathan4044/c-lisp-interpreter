@@ -285,6 +285,37 @@ bool strCat(int argCount, Value* args, Value* result) {
 
     for (int i = 0; i < argCount; i++) {
         Value v = args[i];
+#ifdef NAN_BOXING
+        if (IS_BOOL(v)) {
+            len += AS_BOOL(v) ? 4 : 5;
+        } else if (IS_NULL(v)) {
+            len += 4;
+        } else if (IS_NUMBER(v)) {
+            sprintf(str, "%g", AS_NUMBER(v));
+            len += strlen(str);
+        } else if (IS_OBJ(v)) {
+            Obj* obj = AS_OBJ(v);
+
+            switch (obj->type) {
+                case OBJ_STRING:
+                    len += AS_STRING(v)->length;
+                    break;
+                case OBJ_LIST:
+                    len += 6;
+                    break;
+                case OBJ_DICT:
+                    len += 6;
+                    break;
+                case OBJ_FUNCTION:
+                case OBJ_CLOSURE:
+                case OBJ_NATIVE:
+                    len += 6;
+                case OBJ_UPVALUE:
+                    runtimeError("Should not be able to pass upvalue.");
+                    return false;
+            }
+        }
+#else
         switch (v.type) {
             case VAL_BOOL:
                 if (AS_BOOL(v)) {
@@ -301,8 +332,10 @@ bool strCat(int argCount, Value* args, Value* result) {
                 len += strlen(str);
                 break;
             case VAL_OBJ:
+                // TODO: broken
                 len += AS_STRING(v)->length;
         }
+#endif
     }
 
     char* chars = ALLOCATE(char, len);
@@ -311,6 +344,52 @@ bool strCat(int argCount, Value* args, Value* result) {
 
     for (int i = 0; i < argCount; i++) {
         Value v = args[i];
+#ifdef NAN_BOXING
+        if (IS_BOOL(v)) {
+            if (AS_BOOL(v)) {
+                memcpy(chars+current, "true", 4);
+                current += 4;
+            } else {
+                memcpy(chars+current, "false", 5);
+                current += 5;
+            }
+        } else if (IS_NULL(v)) {
+            memcpy(chars+current, "null", 4);
+            current += 4;
+        } else if (IS_NUMBER(v)) {
+            sprintf(str, "%g", AS_NUMBER(v));
+            int l = strlen(str);
+            memcpy(chars+current, str, l);
+            current += l;
+        } else if (IS_OBJ(v)) {
+            Obj* obj = AS_OBJ(v);
+
+            switch (obj->type) {
+                case OBJ_STRING:
+                    s = AS_STRING(v);
+                    memcpy(chars+current, s->chars, s->length);
+                    current += s->length;
+                    break;
+                case OBJ_LIST:
+                    memcpy(chars+current, "<list>", 6);
+                    current += 6;
+                    break;
+                case OBJ_DICT:
+                    memcpy(chars+current, "<dict>", 6);
+                    current += 6;
+                    break;
+                case OBJ_FUNCTION:
+                case OBJ_CLOSURE:
+                case OBJ_NATIVE:
+                    memcpy(chars+current, "< fn >", 6);
+                    current += 6;
+                    break;
+                case OBJ_UPVALUE:
+                    runtimeError("Should not be able to pass upvalue.");
+                    return false;
+            }
+        }
+#else
         switch (v.type) {
             case VAL_BOOL:
                 if (AS_BOOL(v)) {
@@ -331,12 +410,14 @@ bool strCat(int argCount, Value* args, Value* result) {
                 memcpy(chars+current, str, l);
                 current += l;
                 break;
+            // TODO: broken
             case VAL_OBJ:
                 s = AS_STRING(v);
                 memcpy(chars+current, s->chars, s->length);
                 current += s->length;
                 break;
         }
+#endif
     }
     chars[len-1] = '\0';
     s = takeString(chars, len);

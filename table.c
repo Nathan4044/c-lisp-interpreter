@@ -60,6 +60,19 @@ static Entry* findEntry(Entry* entries, int capacity, Value key, uint32_t hash) 
 }
 
 bool hashOf(Value* value, uint32_t* result) {
+#ifdef NAN_BOXING
+    if (IS_BOOL(*value)) {
+        *result = (uint32_t)AS_BOOL(*value);
+    } else if (IS_NUMBER(*value)) {
+        *result = (uint32_t)AS_NUMBER(*value);
+    } else if (IS_STRING(*value)) {
+        *result = AS_STRING(*value)->hash;
+    } else {
+        return false;
+    }
+
+    return true;
+#else
     switch (value->type) {
         case VAL_BOOL:
             *result = (uint32_t)value->as.boolean;
@@ -76,6 +89,7 @@ bool hashOf(Value* value, uint32_t* result) {
         case VAL_NULL:
             return false;
     }
+#endif
 }
 
 // Retrieve the value in the table associated with the given key, and place it

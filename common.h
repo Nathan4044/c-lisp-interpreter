@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define NAN_BOXING
+
 // Enables printing of compiled chunks. Comment out to disable.
 // #define DEBUG_PRINT_CODE
 
