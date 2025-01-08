@@ -485,6 +485,25 @@ bool push_(int argCount, Value* args, Value* result) {
     return true;
 }
 
+// Append the provided Value to the List. Return null.
+bool pushMut(int argCount, Value* args, Value* result) {
+    if (argCount != 2) {
+        runtimeError(
+            "Attempted to call 'push!' with incorrect number of arguments."
+        );
+        return false;
+    }
+
+    if (!IS_LIST(args[0])) {
+        runtimeError("Attempted to call 'push!' on non-list object.");
+        return false;
+    }
+
+    writeValueArray(&AS_LIST(args[0])->array, args[1]);
+
+    return true;
+}
+
 // Return the first item of the provided list, null if list is empty.
 bool first(int argCount, Value* args, Value* result) {
     if (argCount != 1) {

@@ -93,6 +93,7 @@ void initVM() {
     // List related builtins
     defineNative("list", list);
     defineNative("push", push_);
+    defineNative("push!", pushMut);
     defineNative("first", first);
     defineNative("rest", rest);
     defineNative("len", len);

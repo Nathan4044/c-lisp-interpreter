@@ -17,6 +17,7 @@ bool rem(int argCount, Value* args, Value* result);
 // List related builtins
 bool list(int argCount, Value* args, Value* result);
 bool push_(int argCount, Value* args, Value* result);
+bool pushMut(int argCount, Value* args, Value* result);
 bool first(int argCount, Value* args, Value* result);
 bool rest(int argCount, Value* args, Value* result);
 bool len(int argCount, Value* args, Value* result);
