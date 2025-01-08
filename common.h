@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+// Change Value representation to be contained within a double type.
+// When not defined, uses a tagged union to represent data.
 #define NAN_BOXING
 
 // Enables printing of compiled chunks. Comment out to disable.
@@ -20,6 +22,7 @@
 // Print information to the console when garbage collection is called.
 // #define DEBUG_LOG_GC
 
+// Maximum number of Values that can be represented in an array of size UINT8_MAX.
 #define UINT8_COUNT (UINT8_MAX + 1)
 
 #endif

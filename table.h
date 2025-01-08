@@ -17,9 +17,14 @@ typedef struct {
 
 // Data of Hash Table implementation, operated by associated functions.
 typedef struct {
-    int count; // Number of entries in Table.
-    int capacity; // Maximum spaces available in Table.
-    Entry* entries; // Pointer to first Entry slot in Array.
+    // Number of entries in Table.
+    int count;
+
+    // Maximum spaces available in Table.
+    int capacity;
+
+    // Pointer to first Entry slot in Array.
+    Entry* entries;
 } Table;
 
 void initTable(Table* table);

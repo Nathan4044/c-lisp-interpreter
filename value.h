@@ -14,6 +14,8 @@ typedef struct ObjDict ObjDict;
 
 #ifdef NAN_BOXING
 
+// When all of these bytes are set, the Value is not a number.
+//
 // all NAN bits set, quiet NAN bit set (unset can represent error values which
 // are defined by the IEEE floating point number specification), plus an extra
 // bit set for special values defined by Intel.
@@ -24,10 +26,14 @@ typedef struct ObjDict ObjDict;
 // determine if the value is a pointer.
 #define SIGN_BIT ((uint64_t)0x8000000000000000)
 
+// When a Value is not a number or pointer, these values represent the remaining
+// possible values: true, false, and null.
 #define TAG_NULL  1 // 01
 #define TAG_FALSE 2 // 10
 #define TAG_TRUE  3 // 11
 
+// Type mask to represent a lisp Value. This way, Value can be used throughout
+// the codebase whether or not NaN boxing is defined.
 typedef uint64_t Value;
 
 #define IS_BOOL(value)   (((value) | 1) == TRUE_VAL)
@@ -49,6 +55,7 @@ typedef uint64_t Value;
 #define OBJ_VAL(obj) \
     (Value)(SIGN_BIT | QNAN | (uint64_t)(uintptr_t)(obj))
 
+// Convert the 64 bit Value to a 64 bit floating point number.
 static inline double valueToNum(Value value) {
     // memcpy is optimised away at compile time, meaning that the bits are
     // simply seen as the Value type rather than double.
@@ -57,6 +64,7 @@ static inline double valueToNum(Value value) {
     return num;
 }
 
+// Convert the 64 bit floating point number to a 64 bit Value.
 static inline Value numToValue(double num) {
     // memcpy is optimised away at compile time, meaning that the bits are
     // simply seen as the Value type rather than double.

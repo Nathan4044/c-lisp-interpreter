@@ -20,12 +20,17 @@
 typedef struct {
     // The most recent token from scanToken.
     Token current;
+
     // The previously scanned token, the token currently being compiled.
     Token previous;
+
+    // Has the compiler had any error at any point during compilation.
     bool hadError;
+
     // Ensures that the user isn't bombarded with error messages
     // for a single issue.
     bool panicMode;
+
     // Used to track how deep into an s-expression the parser is.
     int lParenCount;
 } Parser;
@@ -35,16 +40,24 @@ static void expression();
 // Local is the compiler's representation of a local variable that will exist
 // on the stack.
 typedef struct {
-    Token name; // Contains the string of the variable name.
-    int depth; // How deeply nested the variable is.
-    bool isCaptured; // If Local variable is captured as upvalue in closure.
+    // Contains the string of the variable name.
+    Token name;
+
+    // How deeply nested the variable is.
+    int depth;
+
+    // If Local variable is captured as upvalue in closure.
+    bool isCaptured;
 } Local;
 
 // Upvalue is a representation of a variable that has been captured from an
 // enclosing scope.
 typedef struct {
-    uint8_t index; // Into the function's list of upvalues.
-    bool isLocal; // If captured from immediately surrounding scope.
+    // Into the function's list of upvalues.
+    uint8_t index;
+
+    // If captured from immediately surrounding scope.
+    bool isLocal;
 } Upvalue;
 
 // FunctionType Describes whether we're compiling a function or top level
@@ -61,17 +74,26 @@ typedef struct Compiler {
     // definitions can be arbitrarily nested, this can create a list of
     // compilers.
     struct Compiler* enclosing;
+
     // Function is the current function being compiled to bytecode. For
     // consistency and simplicity, the top level expressions of the script are
     // counted as a function as well.
     ObjFunction* function;
+
     // Indicates whether the compiler is compiling the script or an individual
     // function.
     FunctionType type;
 
-    Local locals[UINT8_COUNT]; // Collection of local variables.
+    // Collection of local variables.
+    Local locals[UINT8_COUNT];
+
+    // Current number of local variables.
     int localCount;
-    Upvalue upvalues[UINT8_COUNT]; // Collection of Upvalues.
+
+    // Collection of Upvalues.
+    Upvalue upvalues[UINT8_COUNT];
+
+    // How many scopes enclose this one.
     int scopeDepth;
 } Compiler;
 
