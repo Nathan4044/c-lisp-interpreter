@@ -215,7 +215,14 @@ Token scanToken() {
         case ')': return makeToken(TOKEN_RIGHT_PAREN);
         case '{': return makeToken(TOKEN_LEFT_BRACE);
         case '}': return makeToken(TOKEN_RIGHT_BRACE);
-        case '-': if (isDigit(peek())) return number(); break;
+        case '+': return makeToken(TOKEN_PLUS);
+        case '-':
+            if (isDigit(peek()))
+                return number();
+            else
+                return makeToken(TOKEN_DASH);
+        case '*': return makeToken(TOKEN_STAR);
+        case '/': return makeToken(TOKEN_SLASH);
         case '\'': return makeToken(TOKEN_QUOTE);
         case '"': return string();
     }

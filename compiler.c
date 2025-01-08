@@ -504,6 +504,32 @@ static void while_() {
     advance();
 }
 
+static uint8_t parseArgs() {
+    uint8_t argCount = 0;
+    while (!match(TOKEN_RIGHT_PAREN)) {
+        if (check(TOKEN_EOF)) {
+            error("Unexpected end of file.");
+            return -1;
+        }
+
+        expression();
+
+        if (argCount == 255) {
+            error("Can't have more than 255 arguments.");
+            return -1;
+        }
+
+        argCount++;
+    }
+
+    return argCount;
+}
+
+static void nativeMath(uint8_t ins) {
+    uint8_t argCount = parseArgs();
+    emitBytes(ins, argCount);
+}
+
 // Parse a def expression by finding the associated variable location,
 // parsing the expression associated with the variable's value, and emitting a
 // define OpCode to put the variable in the correct corresponding location.
@@ -534,21 +560,7 @@ static void call() {
     // retrieve function
     parseExpression();
 
-    uint8_t argCount = 0;
-    while (!match(TOKEN_RIGHT_PAREN)) {
-        if (check(TOKEN_EOF)) {
-            error("Unexpected end of file.");
-            return;
-        }
-
-        expression();
-
-        if (argCount == 255) {
-            error("Can't have more than 255 arguments.");
-        }
-
-        argCount++;
-    }
+    uint8_t argCount = parseArgs();
 
     emitBytes(OP_CALL, argCount);
 }
@@ -579,6 +591,18 @@ static void sExpression() {
             break;
         case TOKEN_WHILE:
             while_();
+            break;
+        case TOKEN_PLUS:
+            nativeMath(OP_ADD);
+            break;
+        case TOKEN_DASH:
+            nativeMath(OP_SUBTRACT);
+            break;
+        case TOKEN_STAR:
+            nativeMath(OP_MULTIPLY);
+            break;
+        case TOKEN_SLASH:
+            nativeMath(OP_DIVIDE);
             break;
         default:
             call();
@@ -622,6 +646,10 @@ static void parseExpression() {
             }
         case TOKEN_LEFT_PAREN: sExpression(); break;
         case TOKEN_LEFT_BRACE: callDict(); break;
+        case TOKEN_PLUS:
+        case TOKEN_DASH:
+        case TOKEN_STAR:
+        case TOKEN_SLASH:
         case TOKEN_IDENTIFIER: variable(); break;
         case TOKEN_STRING: string(); break;
         case TOKEN_NUMBER: number(); break;

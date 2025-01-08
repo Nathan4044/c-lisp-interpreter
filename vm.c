@@ -5,6 +5,7 @@
 
 #include "chunk.h"
 #include "compiler.h"
+#include "debug.h"
 #include "memory.h"
 #include "nativeFns.h"
 #include "object.h"
@@ -143,6 +144,14 @@ static bool call(ObjClosure* closure, int argCount) {
     return true;
 }
 
+static bool callNative(NativeFn native, int argCount, bool popFunc) {
+    Value result = NULL_VAL;
+    bool successful = native(argCount, vm.stackTop - argCount, &result);
+    vm.stackTop -= argCount + popFunc;
+    push(result);
+    return successful;
+}
+
 // Properly execute the call convention for the given value type.
 static bool callValue(Value callee, int argCount) {
     if (!IS_OBJ(callee)) {
@@ -155,11 +164,7 @@ static bool callValue(Value callee, int argCount) {
             return call(AS_CLOSURE(callee), argCount);
         case OBJ_NATIVE: {
             NativeFn native = AS_NATIVE(callee);
-            Value result = NULL_VAL;
-            bool successful = native(argCount, vm.stackTop - argCount, &result);
-            vm.stackTop -= argCount + 1;
-            push(result);
-            return successful;
+            return callNative(native, argCount, true);
         }
         default:
             runtimeError("Can only call functions.");
@@ -311,6 +316,39 @@ static InterpretResult run() {
                     return INTERPRET_RUNTIME_ERROR;
                 }
                 frame = &vm.frames[vm.frameCount - 1];
+                break;
+            }
+            case OP_ADD: {
+                int argCount = READ_BYTE();
+
+                if (!callNative(add, argCount, false)) {
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                break;
+            }
+            case OP_SUBTRACT: {
+                int argCount = READ_BYTE();
+
+                if (!callNative(subtract, argCount, false)) {
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                break;
+            }
+            case OP_MULTIPLY: {
+                int argCount = READ_BYTE();
+
+                if (!callNative(multiply, argCount, false)) {
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                break;
+            }
+            case OP_DIVIDE: {
+                int argCount = READ_BYTE();
+                push(NULL_VAL);
+
+                if (!callNative(divide, argCount, false)) {
+                    return INTERPRET_RUNTIME_ERROR;
+                }
                 break;
             }
             case OP_CLOSURE: {
