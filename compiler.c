@@ -297,50 +297,11 @@ static void beginScope() {
     current->scopeDepth++;
 }
 
-// Remove one from the scope depth, remove local variables at the
-// removed scope or capture them as upvalues if they're using in a subsequent
-// scope.
-static void endScope() {
-    current->scopeDepth--;
-
-    while (current->localCount > 0 &&
-            current->locals[current->localCount - 1].depth > current->scopeDepth) {
-        if (current->locals[current->localCount - 1].isCaptured) {
-            emitByte(OP_CLOSE_UPVALUE);
-        } else {
-            emitByte(OP_POP);
-        }
-        current->localCount--;
-    }
-}
-
 // Emit an instruction to retrieve the constant number value and place it on
 // the stack.
 static void number() {
     double value = strtod(parser.previous.start, NULL);
     emitConstant(NUMBER_VAL(value));
-}
-
-// Compile the appropriate expressions for each of the arguments passed to a
-// function, return the number of arguments compiled.
-static int compileArgs() {
-    int operandCount = 0;
-    while (parser.current.type != TOKEN_RIGHT_PAREN) {
-        if (parser.current.type == TOKEN_EOF) {
-            error("Unexpected end of file");
-            return -1;
-        }
-
-        if (operandCount > UINT8_MAX) {
-            error("Too many arguments in s-expression.");
-            return -1;
-        }
-
-        expression();
-        operandCount++;
-    }
-
-    return operandCount;
 }
 
 static uint8_t parseVariable(const char* message);
@@ -361,7 +322,7 @@ static void lambda() {
             errorAtCurrent("Can't have more than 255 parameters\n");
         }
 
-        uint8_t constant = parseVariable("Expect parameter name\n");
+        parseVariable("Expect parameter name\n");
     }
 
     while (!match(TOKEN_RIGHT_PAREN)) {

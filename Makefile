@@ -1,7 +1,7 @@
 build:
-	@cc *.c -o lisp
+	@cc *.c -Wall -Werror -o lisp
 debug-build:
-	@cc *.c -g -o lisp
+	@cc *.c -Wall -Werror -g -o lisp
 debug: debug-build
 	@lldb lisp
 run: build

@@ -66,16 +66,6 @@ static bool isValidIdentChar(char c) {
     }
 }
 
-// If the next character to be consumed matches the given character, advance
-// and return true. Otherwise, don't advance and return false.
-static bool match(char expected) {
-    if (isAtEnd()) return false;
-
-    if (*scanner.current != expected) return false;
-    scanner.current++;
-    return true;
-}
-
 // Return a token of the provided type.
 // Add the start position of the token literal, the length, and the line number.
 static Token makeToken(TokenType type) {
