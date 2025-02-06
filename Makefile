@@ -1,8 +1,8 @@
-build:
-	@cc *.c -o lisp
-debug-build:
-	@cc *.c -g -o lisp
-debug: debug-build
-	@lldb lisp
-run: build
-	@rlwrap ./lisp
+P=lisp
+OBJECTS = chunk.o compiler.o debug.o memory.o nativeFns.o object.o scanner.o table.o value.o vm.o
+CFLAGS = -g -pg -Wall -Werror -O3
+
+$(P): $(OBJECTS)
+
+clean:
+	@rm -f $(OBJECTS)
