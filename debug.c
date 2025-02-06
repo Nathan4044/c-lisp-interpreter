@@ -41,14 +41,6 @@ static int constantInstruction(const char* name, Chunk* chunk, int offset) {
     return offset + 2;
 }
 
-// Prints a representation of an instruction that references a constant.
-static int rangeInstruction(const char* name, Chunk* chunk, int offset) {
-    uint8_t constant = chunk->code[offset + 1];
-    printf("%-16s %4d\n", name, constant);
-
-    return offset + 2;
-}
-
 // Prints a jump instruction, along with the destination index.
 static int jumpInstruction(const char* name, int sign, Chunk* chunk, int offset) {
     uint16_t jump = (uint16_t)(chunk->code[offset + 1] << 8);
