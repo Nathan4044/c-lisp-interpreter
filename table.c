@@ -98,7 +98,7 @@ bool hashOf(Value* value, uint32_t* result) {
 bool tableGet(Table *table, Value key, Value* value) {
     if (table->count == 0) return false;
 
-    uint32_t hash;
+    uint32_t hash = 0;
     if (!hashOf(&key, &hash)) return false;
 
     Entry* entry = findEntry(table->entries, table->capacity, key, hash);
@@ -124,7 +124,7 @@ static void adjustCapacity(Table* table, int capacity) {
         Entry* entry = &table->entries[i];
         if (IS_NULL(entry->key)) continue;
 
-        uint32_t hash;
+        uint32_t hash = 0;
         hashOf(&entry->key, &hash);
 
         Entry* dest = findEntry(entries, capacity, entry->key, hash);
@@ -218,7 +218,7 @@ ObjString* tableFindString(Table* table,
             // stop at tombstone
             if (IS_NULL(entry->value)) return NULL;
         } else {
-            uint32_t entryHash;
+            uint32_t entryHash = 0;
             hashOf(&entry->key, &entryHash);
             ObjString* entryString = AS_STRING(entry->key);
 
