@@ -6,4 +6,4 @@ CC=clang -std=c99
 $(P): $(OBJECTS)
 
 clean:
-	@rm -f $(OBJECTS)
+	@rm -rf $(OBJECTS) $(P) $(P).dSYM
