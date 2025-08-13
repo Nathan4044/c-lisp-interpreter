@@ -344,7 +344,7 @@ bool strCat(int argCount, Value* args, Value* result) {
 #endif
     }
 
-    char* chars = ALLOCATE(char, (size_t)len);
+    char* chars = ALLOCATE(char, len);
     int current = 0;
     ObjString* s;
 
@@ -479,7 +479,7 @@ bool push_(int argCount, Value* args, Value* result) {
 
     newlist->array.count = oldList->array.count;
     newlist->array.capacity = oldList->array.capacity;
-    newlist->array.values = ALLOCATE(Value, (size_t)newlist->array.capacity);
+    newlist->array.values = ALLOCATE(Value, newlist->array.capacity);
 
     for (int i = 0; i < oldList->array.count; i++) {
         newlist->array.values[i] = oldList->array.values[i];
@@ -561,7 +561,7 @@ bool rest(int argCount, Value* args, Value* result) {
     ObjList* newlist = newList();
     newlist->array.capacity = oldList->array.capacity;
     newlist->array.count = oldList->array.count - 1;
-    newlist->array.values = ALLOCATE(Value, (size_t)newlist->array.capacity);
+    newlist->array.values = ALLOCATE(Value, newlist->array.capacity);
 
     for (int i = 0; i < newlist->array.count; i++) {
         newlist->array.values[i] = oldList->array.values[i+1];

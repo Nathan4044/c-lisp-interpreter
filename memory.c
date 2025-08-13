@@ -60,7 +60,7 @@ void markObject(Obj *object) {
     object->isMarked = true;
 
     if (vm.greyCapacity < vm.greyCount + 1) {
-        vm.greyCapacity = GROW_CAPACITY(vm.greyCapacity);
+        vm.greyCapacity = (int)GROW_CAPACITY(vm.greyCapacity);
         vm.greyStack = (Obj**)realloc(vm.greyStack,
                 sizeof(Obj*) * (size_t)vm.greyCapacity);
 
@@ -139,7 +139,7 @@ static void freeObject(Obj* object) {
     switch (object->type) {
         case OBJ_STRING: {
             ObjString* string = (ObjString*)object;
-            FREE_ARRAY(char, string->chars, (size_t)string->length + 1);
+            FREE_ARRAY(char, string->chars, string->length + 1);
             FREE(ObjString, object);
             break;
         }
@@ -151,7 +151,7 @@ static void freeObject(Obj* object) {
         }
         case OBJ_CLOSURE: {
             ObjClosure* closure = (ObjClosure*)object;
-            FREE_ARRAY(ObjUpvalue*, closure->upvalues, (size_t)closure->upvalueCount);
+            FREE_ARRAY(ObjUpvalue*, closure->upvalues, closure->upvalueCount);
             FREE(ObjClosure, object);
             break;
         }

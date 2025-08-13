@@ -20,11 +20,11 @@ void initChunk(Chunk *chunk) {
 void writeChunk(Chunk *chunk, uint8_t byte, int line) {
     if (chunk->capacity < chunk->count + 1) {
         int oldCapacity = chunk->capacity;
-        chunk->capacity = GROW_CAPACITY(oldCapacity);
-        chunk->code = GROW_ARRAY(uint8_t, chunk->code, (size_t)oldCapacity,
-                (size_t)chunk->capacity);
-        chunk->lines = GROW_ARRAY(int, chunk->lines, (size_t)oldCapacity,
-                (size_t)chunk->capacity);
+        chunk->capacity = (int)GROW_CAPACITY(oldCapacity);
+        chunk->code = GROW_ARRAY(uint8_t, chunk->code, oldCapacity,
+                chunk->capacity);
+        chunk->lines = GROW_ARRAY(int, chunk->lines, oldCapacity,
+                chunk->capacity);
     }
 
     chunk->code[chunk->count] = byte;
@@ -39,8 +39,8 @@ void overwriteLast(Chunk *chunk, uint8_t byte) {
 
 // freeChunk frees any allocated memory associated with a Chunk.
 void freeChunk(Chunk *chunk) {
-    FREE_ARRAY(uint8_t, chunk->code, (size_t)chunk->capacity);
-    FREE_ARRAY(int, chunk->lines, (size_t)chunk->capacity);
+    FREE_ARRAY(uint8_t, chunk->code, chunk->capacity);
+    FREE_ARRAY(int, chunk->lines, chunk->capacity);
     freeValueArray(&chunk->constants);
     initChunk(chunk);
 }

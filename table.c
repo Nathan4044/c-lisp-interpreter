@@ -18,7 +18,7 @@ void initTable(Table *table) {
 
 // Free all data that has been associated with a hash table.
 void freeTable(Table *table) {
-    FREE_ARRAY(Entry, table->entries, (size_t)table->capacity);
+    FREE_ARRAY(Entry, table->entries, table->capacity);
     initTable(table);
 }
 
@@ -111,7 +111,7 @@ bool tableGet(Table *table, Value key, Value* value) {
 // Reallocate the entries array from the Table to a larger capacity array.
 // Transfer all non-tombstone values to the new array.
 static void adjustCapacity(Table* table, int capacity) {
-    Entry* entries = ALLOCATE(Entry, (size_t)capacity);
+    Entry* entries = ALLOCATE(Entry, capacity);
 
     for (int i = 0; i < capacity; i++) {
         entries[i].key = NULL_VAL;
@@ -133,7 +133,7 @@ static void adjustCapacity(Table* table, int capacity) {
         table->count++;
     }
 
-    FREE_ARRAY(Entry, table->entries, (size_t)table->capacity);
+    FREE_ARRAY(Entry, table->entries, table->capacity);
     table->entries = entries;
     table->capacity = capacity;
 }
@@ -143,7 +143,7 @@ static void adjustCapacity(Table* table, int capacity) {
 // true if the key did not already exist in the table.
 bool tableSet(Table *table, Value key, Value value) {
     if (table->count + 1 > table->capacity * TABLE_MAX_LOAD) {
-        int capacity = GROW_CAPACITY(table->capacity);
+        int capacity = (int)GROW_CAPACITY(table->capacity);
         adjustCapacity(table, capacity);
     }
 
