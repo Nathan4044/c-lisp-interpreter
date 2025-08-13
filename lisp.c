@@ -4,7 +4,7 @@
 
 #include "vm.h"
 
-static void repl() {
+static void repl(void) {
     char line[1024];
 
     for (;;) {
@@ -27,7 +27,7 @@ static char* readFile(const char* path) {
     }
 
     fseek(file, 0L, SEEK_END);
-    size_t fileSize = ftell(file);
+    size_t fileSize = (size_t)ftell(file);
     rewind(file);
 
     char* buffer = (char*)malloc(fileSize + 1);

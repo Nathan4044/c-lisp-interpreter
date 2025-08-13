@@ -62,7 +62,7 @@ void markObject(Obj *object) {
     if (vm.greyCapacity < vm.greyCount + 1) {
         vm.greyCapacity = GROW_CAPACITY(vm.greyCapacity);
         vm.greyStack = (Obj**)realloc(vm.greyStack,
-                sizeof(Obj*) * vm.greyCapacity);
+                sizeof(Obj*) * (size_t)vm.greyCapacity);
 
         if (vm.greyStack == NULL) exit(1);
     }
@@ -139,7 +139,7 @@ static void freeObject(Obj* object) {
     switch (object->type) {
         case OBJ_STRING: {
             ObjString* string = (ObjString*)object;
-            FREE_ARRAY(char, string->chars, string->length + 1);
+            FREE_ARRAY(char, string->chars, (size_t)string->length + 1);
             FREE(ObjString, object);
             break;
         }
@@ -151,7 +151,7 @@ static void freeObject(Obj* object) {
         }
         case OBJ_CLOSURE: {
             ObjClosure* closure = (ObjClosure*)object;
-            FREE_ARRAY(ObjUpvalue*, closure->upvalues, closure->upvalueCount);
+            FREE_ARRAY(ObjUpvalue*, closure->upvalues, (size_t)closure->upvalueCount);
             FREE(ObjClosure, object);
             break;
         }
@@ -177,7 +177,7 @@ static void freeObject(Obj* object) {
 }
 
 // Mark all Values directly accessible by the VM.
-static void markRoots() {
+static void markRoots(void) {
     for (Value* slot = vm.stack; slot < vm.stackTop; slot++) {
         markValue(*slot);
     }
@@ -197,7 +197,7 @@ static void markRoots() {
 
 // For each marked object, remove it from the greyStack and add all associated
 // values onto the greyStack.
-static void traceReferences() {
+static void traceReferences(void) {
     while (vm.greyCount > 0) {
         Obj* object = vm.greyStack[--vm.greyCount];
         blackenObject(object);
@@ -206,7 +206,7 @@ static void traceReferences() {
 
 // Go through all the objects that have been allocated. Free any that have not
 // been marked.
-static void sweep() {
+static void sweep(void) {
     Obj* previous = NULL;
     Obj* object = vm.objects;
 
@@ -234,7 +234,7 @@ static void sweep() {
 // running.
 // Starts by recursively tracing through all objects reachable from the VM,
 // then delete all objects that have not been marked as reachable.
-void collectGarbage() {
+void collectGarbage(void) {
 # ifdef DEBUG_LOG_GC
     printf("-- gc begin\n");
     size_t before = vm.bytesAllocated;
@@ -256,7 +256,7 @@ void collectGarbage() {
 }
 
 // Free all objects that have been allocated in the VM.
-void freeObjects() {
+void freeObjects(void) {
     Obj* object = vm.objects;
     while (object != NULL) {
         Obj* next = object->next;

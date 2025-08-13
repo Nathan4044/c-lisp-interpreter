@@ -147,14 +147,14 @@ typedef struct {
 } ObjClosure;
 
 ObjClosure* newClosure(ObjFunction* function);
-ObjFunction* newFunction();
+ObjFunction* newFunction(void);
 ObjNative* newNative(NativeFn function);
 ObjUpvalue* newUpvalue(Value* slot);
 ObjString* takeString(char* chars, int length);
 ObjString* copyString(const char* chars, int length);
 void printObject(Value value);
-ObjList* newList();
-ObjDict* newDict();
+ObjList* newList(void);
+ObjDict* newDict(void);
 
 // Return true if Value is an Object and has the matching Object type.
 static inline bool isObjType(Value value, ObjType type) {

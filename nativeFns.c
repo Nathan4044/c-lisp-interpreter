@@ -11,8 +11,13 @@
 #include "value.h"
 #include "vm.h"
 
+// remove unused parameter warning for functions built to match the builtin function signature
+#define UNUSED(x) (void)(x)
+
 // Return the amount of seconds since execution began.
 bool clockNative(int argCount, Value* args, Value* result) {
+    UNUSED(argCount);
+    UNUSED(args);
     *result = NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
     return true;
 }
@@ -267,6 +272,7 @@ bool equal(int count, Value* args, Value* result) {
 
 // Print all Values given, separated by a space. Returns null.
 bool printVals(int argCount, Value* args, Value* result) {
+    UNUSED(result);
     for (int i = 0; i < argCount; i++) {
         printValue(args[i]);
 
@@ -338,7 +344,7 @@ bool strCat(int argCount, Value* args, Value* result) {
 #endif
     }
 
-    char* chars = ALLOCATE(char, len);
+    char* chars = ALLOCATE(char, (size_t)len);
     int current = 0;
     ObjString* s;
 
@@ -358,7 +364,7 @@ bool strCat(int argCount, Value* args, Value* result) {
             current += 4;
         } else if (IS_NUMBER(v)) {
             sprintf(str, "%g", AS_NUMBER(v));
-            int l = strlen(str);
+            int l = (int)strlen(str);
             memcpy(chars+current, str, l);
             current += l;
         } else if (IS_OBJ(v)) {
@@ -473,7 +479,7 @@ bool push_(int argCount, Value* args, Value* result) {
 
     newlist->array.count = oldList->array.count;
     newlist->array.capacity = oldList->array.capacity;
-    newlist->array.values = ALLOCATE(Value, newlist->array.capacity);
+    newlist->array.values = ALLOCATE(Value, (size_t)newlist->array.capacity);
 
     for (int i = 0; i < oldList->array.count; i++) {
         newlist->array.values[i] = oldList->array.values[i];
@@ -487,6 +493,7 @@ bool push_(int argCount, Value* args, Value* result) {
 
 // Append the provided Value to the List. Return null.
 bool pushMut(int argCount, Value* args, Value* result) {
+    UNUSED(result);
     if (argCount != 2) {
         runtimeError(
             "Attempted to call 'push!' with incorrect number of arguments."
@@ -554,7 +561,7 @@ bool rest(int argCount, Value* args, Value* result) {
     ObjList* newlist = newList();
     newlist->array.capacity = oldList->array.capacity;
     newlist->array.count = oldList->array.count - 1;
-    newlist->array.values = ALLOCATE(Value, newlist->array.capacity);
+    newlist->array.values = ALLOCATE(Value, (size_t)newlist->array.capacity);
 
     for (int i = 0; i < newlist->array.count; i++) {
         newlist->array.values[i] = oldList->array.values[i+1];
@@ -673,3 +680,4 @@ bool get(int argCount, Value* args, Value* result) {
 
     return true;
 }
+#undef UNUSED

@@ -22,7 +22,7 @@ static Value peek(int distance) {
 
 // Reset the VM's stack my moving the pointer for the top of the stack to
 // the beginning of the stack array.
-static void resetStack() {
+static void resetStack(void) {
     vm.stackTop = vm.stack;
     vm.frameCount = 0;
     vm.openUpvalues = NULL;
@@ -41,7 +41,7 @@ void runtimeError(const char* format, ...) {
     for (int i = vm.frameCount - 1; i >= 0; i--) {
         CallFrame* frame = &vm.frames[i];
         ObjFunction* function = frame->closure->function;
-        size_t instruction = frame->ip - function->chunk.code - 1;
+        size_t instruction = (size_t)(frame->ip - function->chunk.code - 1);
         fprintf(stderr, "[line %d] in ",
                 function->chunk.lines[instruction]);
         if (function->name == NULL) {
@@ -64,7 +64,7 @@ static void defineNative(const char* name, NativeFn function) {
 
 // Set the initial state of the VM.
 // Zero all the VM's fields, and add all relevant native functions.
-void initVM() {
+void initVM(void) {
     resetStack();
     vm.objects = NULL;
     initTable(&vm.strings);
@@ -105,7 +105,7 @@ void initVM() {
 }
 
 // Free all allocated memory associated with the VM.
-void freeVM() {
+void freeVM(void) {
     freeObjects();
     freeTable(&vm.strings);
     freeTable(&vm.globals);
@@ -118,7 +118,7 @@ void push(Value value) {
 }
 
 // Remove the top Value from the VM's value stack and return it.
-Value pop() {
+Value pop(void) {
     vm.stackTop--;
     return *vm.stackTop;
 }
@@ -224,7 +224,7 @@ bool isFalsey(Value value) {
 // The instruction is fetched (READ_BYTE in the switch statement), then
 // decoded (the case statements for each instruction), and executed
 // (the actions taken within each case statement).
-static InterpretResult run() {
+static InterpretResult run(void) {
     CallFrame* frame = &vm.frames[vm.frameCount - 1];
 #define READ_BYTE() (*frame->ip++)
 #define READ_CONSTANT() \

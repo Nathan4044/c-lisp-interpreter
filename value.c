@@ -16,9 +16,9 @@ void initValueArray(ValueArray *array) {
 void writeValueArray(ValueArray *array, Value value) {
     if (array->capacity < array->count + 1) {
         int oldCapacity = array->capacity;
-        int newCapacity = GROW_CAPACITY(oldCapacity);
+        int newCapacity = (int)GROW_CAPACITY((size_t)oldCapacity);
 
-        array->values = GROW_ARRAY(Value, array->values, oldCapacity, newCapacity);
+        array->values = GROW_ARRAY(Value, array->values, (size_t)oldCapacity, (size_t)newCapacity);
         array->capacity = newCapacity;
     }
 
@@ -28,7 +28,7 @@ void writeValueArray(ValueArray *array, Value value) {
 
 // freeValueArray frees any allocated memory associated with a ValueArray.
 void freeValueArray(ValueArray *array) {
-    FREE_ARRAY(Value, array->values, array->capacity);
+    FREE_ARRAY(Value, array->values, (size_t)array->capacity);
     initValueArray(array);
 }
 

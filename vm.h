@@ -85,12 +85,12 @@ typedef enum {
 
 extern VM vm;
 
-void initVM();
-void freeVM();
+void initVM(void);
+void freeVM(void);
 
 InterpretResult interpret(const char* source);
 void push(Value value);
-Value pop();
+Value pop(void);
 
 void runtimeError(const char* format, ...);
 bool isFalsey(Value value);

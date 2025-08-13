@@ -18,7 +18,7 @@ void initTable(Table *table) {
 
 // Free all data that has been associated with a hash table.
 void freeTable(Table *table) {
-    FREE_ARRAY(Entry, table->entries, table->capacity);
+    FREE_ARRAY(Entry, table->entries, (size_t)table->capacity);
     initTable(table);
 }
 
@@ -33,7 +33,7 @@ static Entry* findEntry(Entry* entries, int capacity, Value key, uint32_t hash) 
     // For capacities that are powers of 2, this is equivalent to:
     // uint32_t index = hash % capacity;
     // But significantly more CPU efficient (modulo is slow).
-    uint32_t index = hash & (capacity - 1);
+    uint32_t index = hash & (uint32_t)(capacity - 1);
 
     Entry* tombstone = NULL;
 
@@ -55,7 +55,7 @@ static Entry* findEntry(Entry* entries, int capacity, Value key, uint32_t hash) 
         }
 
         // Faster than modulo for powers of two. See index declaration.
-        index = (index + 1) & (capacity - 1);
+        index = (index + 1) & (uint32_t)(capacity - 1);
     }
 }
 
@@ -111,7 +111,7 @@ bool tableGet(Table *table, Value key, Value* value) {
 // Reallocate the entries array from the Table to a larger capacity array.
 // Transfer all non-tombstone values to the new array.
 static void adjustCapacity(Table* table, int capacity) {
-    Entry* entries = ALLOCATE(Entry, capacity);
+    Entry* entries = ALLOCATE(Entry, (size_t)capacity);
 
     for (int i = 0; i < capacity; i++) {
         entries[i].key = NULL_VAL;
@@ -133,7 +133,7 @@ static void adjustCapacity(Table* table, int capacity) {
         table->count++;
     }
 
-    FREE_ARRAY(Entry, table->entries, table->capacity);
+    FREE_ARRAY(Entry, table->entries, (size_t)table->capacity);
     table->entries = entries;
     table->capacity = capacity;
 }
@@ -209,7 +209,7 @@ ObjString* tableFindString(Table* table,
     // For capacities that are powers of 2, this is equivalent to:
     // uint32_t index = hash % table->capacity;
     // But significantly more CPU efficient (modulo is slow).
-    uint32_t index = hash & (table->capacity - 1);
+    uint32_t index = hash & (uint32_t)(table->capacity - 1);
 
     for (;;) {
         Entry* entry = &table->entries[index];
@@ -223,14 +223,14 @@ ObjString* tableFindString(Table* table,
             ObjString* entryString = AS_STRING(entry->key);
 
             if (entryHash == hash
-                    && memcmp(entryString->chars, chars, length) == 0) {
+                    && memcmp(entryString->chars, chars, (size_t)length) == 0) {
                 // found
                 return entryString;
             }
         }
 
         // Faster than modulo for powers of two. See index declaration.
-        index = (index + 1) & (table->capacity - 1);
+        index = (index + 1) & (uint32_t)(table->capacity - 1);
     }
 }
 

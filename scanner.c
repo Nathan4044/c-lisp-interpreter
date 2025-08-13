@@ -25,23 +25,23 @@ static bool isDigit(char c) {
 }
 
 // Has the scanner reached the end of its input (null terminator).
-static bool isAtEnd() {
+static bool isAtEnd(void) {
     return *scanner.current == '\0';
 }
 
 // Progress the scanner to the next character.
-static char advance() {
+static char advance(void) {
     scanner.current++;
     return scanner.current[-1];
 }
 
 // Return the next character to be consumed.
-static char peek() {
+static char peek(void) {
     return *scanner.current;
 }
 
 // Return second character to be consumed.
-static char peekNext() {
+static char peekNext(void) {
     if (isAtEnd()) return '\0';
     return scanner.current[1];
 }
@@ -89,7 +89,7 @@ static Token errorToken(const char* message) {
 
 // skip over all the whitespace characters from the current point in source,
 // adding to the line count when moving to the next one.
-static void skipWhitespace() {
+static void skipWhitespace(void) {
     for (;;) {
         char c = peek();
         switch(c) {
@@ -122,7 +122,7 @@ static TokenType checkKeyword(
         int start, int length, const char* rest, TokenType type
         ) {
     if (scanner.current - scanner.start == start + length &&
-            memcmp(scanner.start + start, rest, length) == 0) {
+            memcmp(scanner.start + start, rest, (size_t)length) == 0) {
         return type;
     }
 
@@ -132,7 +132,7 @@ static TokenType checkKeyword(
 // Check if the current identifier is actually a keyword, reserved by the
 // language. Return the type of the matched keyword if any, else it is
 // an identifier.
-static TokenType identifierType() {
+static TokenType identifierType(void) {
     switch (scanner.start[0]) {
         case 'a': return checkKeyword(1, 2, "nd", TOKEN_AND);
         case 'd': return checkKeyword(1, 2, "ef", TOKEN_DEF);
@@ -157,13 +157,13 @@ static TokenType identifierType() {
 
 // Read the remaining characters of an identifier, which (after the initial
 // letter or underscore) can be any alphanumeric character or an underscore.
-static Token identifier() {
+static Token identifier(void) {
     while (isValidIdentChar(peek()) || isDigit(peek())) advance();
     return makeToken(identifierType());
 }
 
 // Scan the characters involved in the number token and return a number token.
-static Token number() {
+static Token number(void) {
     while (isDigit(peek())) advance();
 
     // look for decimal
@@ -177,7 +177,7 @@ static Token number() {
 }
 
 // Scan the characters involved in the string token and return a string token.
-static Token string() {
+static Token string(void) {
     while (peek() != '"' && !isAtEnd()) {
         if (peek() == '\n') scanner.line++;
         advance();
@@ -190,7 +190,7 @@ static Token string() {
 }
 
 // Scan and return whatever the next token type is.
-Token scanToken() {
+Token scanToken(void) {
     skipWhitespace();
     scanner.start = scanner.current;
 
