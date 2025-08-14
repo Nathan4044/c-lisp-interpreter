@@ -271,6 +271,7 @@ static InterpretResult run(void)
     int argCount;
     ObjFunction* function;
     Value result;
+
 #define READ_BYTE() (*frame->ip++)
 #define READ_CONSTANT() \
     (frame->closure->function->chunk.constants.values[READ_BYTE()])
@@ -290,6 +291,7 @@ static InterpretResult run(void)
     disassembleInstruction(&frame->closure->function->chunk,
         (int)(frame->ip - frame->closure->function->chunk.code));
 #endif
+
     DISPATCH();
 op_constant:
     constant = READ_CONSTANT();
@@ -354,39 +356,35 @@ op_loop:
     DISPATCH();
 op_call:
     argCount = READ_BYTE();
-    if (!callValue(peek(argCount), argCount)) {
+    if (!callValue(peek(argCount), argCount))
         return INTERPRET_RUNTIME_ERROR;
-    }
     frame = &vm.frames[vm.frameCount - 1];
+
     DISPATCH();
 op_add:
     argCount = READ_BYTE();
-
-    if (!callNative(add, argCount, false)) {
+    if (!callNative(add, argCount, false))
         return INTERPRET_RUNTIME_ERROR;
-    }
+
     DISPATCH();
 op_subtract:
     argCount = READ_BYTE();
-
-    if (!callNative(subtract, argCount, false)) {
+    if (!callNative(subtract, argCount, false))
         return INTERPRET_RUNTIME_ERROR;
-    }
+
     DISPATCH();
 op_multiply:
     argCount = READ_BYTE();
-
-    if (!callNative(multiply, argCount, false)) {
+    if (!callNative(multiply, argCount, false))
         return INTERPRET_RUNTIME_ERROR;
-    }
+
     DISPATCH();
 op_divide:
     argCount = READ_BYTE();
     push(NULL_VAL);
-
-    if (!callNative(divide, argCount, false)) {
+    if (!callNative(divide, argCount, false))
         return INTERPRET_RUNTIME_ERROR;
-    }
+
     DISPATCH();
 op_closure:
     function = AS_FUNCTION(READ_CONSTANT());
@@ -397,11 +395,10 @@ op_closure:
         uint8_t isLocal = READ_BYTE();
         uint8_t index = READ_BYTE();
 
-        if (isLocal) {
+        if (isLocal)
             closure->upvalues[i] = captureUpvalue(frame->slots + index);
-        } else {
+        else
             closure->upvalues[i] = frame->closure->upvalues[index];
-        }
     }
 
     DISPATCH();
@@ -423,6 +420,7 @@ op_return:
     frame = &vm.frames[vm.frameCount - 1];
     DISPATCH();
 
+#undef DISPATCH
 #undef READ_STRING
 #undef READ_SHORT
 #undef READ_CONSTANT
