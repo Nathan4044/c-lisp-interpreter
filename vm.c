@@ -240,178 +240,188 @@ bool isFalsey(Value value)
 // (the actions taken within each case statement).
 static InterpretResult run(void)
 {
+    static void* dispatchTable[] = {
+        &&op_constant,
+        &&op_null,
+        &&op_true,
+        &&op_false,
+        &&op_pop,
+        &&op_define_global,
+        &&op_get_global,
+        &&op_define_local,
+        &&op_get_local,
+        &&op_get_upvalue,
+        &&op_close_upvalue,
+        &&op_jump_false,
+        &&op_jump,
+        &&op_loop,
+        &&op_call,
+        &&op_add,
+        &&op_subtract,
+        &&op_multiply,
+        &&op_divide,
+        &&op_closure,
+        &&op_return,
+    };
     CallFrame* frame = &vm.frames[vm.frameCount - 1];
+    ObjString* name;
+    Value constant;
+    uint8_t slot;
+    uint16_t offset;
+    int argCount;
+    ObjFunction* function;
+    Value result;
 #define READ_BYTE() (*frame->ip++)
 #define READ_CONSTANT() \
     (frame->closure->function->chunk.constants.values[READ_BYTE()])
 #define READ_SHORT() (frame->ip += 2, \
     (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
 #define READ_STRING() AS_STRING(READ_CONSTANT())
-
-    for (;;) {
+#define DISPATCH() goto* dispatchTable[READ_BYTE()]
 #ifdef DEBUG_TRACE_EXECUTION
-        printf("        ");
-        for (Value* slot = vm.stack; slot < vm.stackTop; slot++) {
-            printf("[ ");
-            printValue(*slot);
-            printf(" ]");
-        }
-        printf("\n");
+    printf("        ");
+    for (Value* slot = vm.stack; slot < vm.stackTop; slot++) {
+        printf("[ ");
+        printValue(*slot);
+        printf(" ]");
+    }
+    printf("\n");
 
-        disassembleInstruction(&frame->closure->function->chunk,
-            (int)(frame->ip - frame->closure->function->chunk.code));
+    disassembleInstruction(&frame->closure->function->chunk,
+        (int)(frame->ip - frame->closure->function->chunk.code));
 #endif
-        uint8_t instruction;
-        switch (instruction = READ_BYTE()) {
-        case OP_CONSTANT: {
-            Value constant = READ_CONSTANT();
-            push(constant);
-            break;
-        }
-        case OP_NULL:
-            push(NULL_VAL);
-            break;
-        case OP_TRUE:
-            push(BOOL_VAL(true));
-            break;
-        case OP_FALSE:
-            push(BOOL_VAL(false));
-            break;
-        case OP_POP:
-            pop();
-            break;
-        case OP_DEFINE_GLOBAL: {
-            ObjString* name = READ_STRING();
-            tableSet(&vm.globals, OBJ_VAL(name), peek(0));
-            break;
-        }
-        case OP_GET_GLOBAL: {
-            ObjString* name = READ_STRING();
-            Value value;
+    DISPATCH();
+op_constant:
+    constant = READ_CONSTANT();
+    push(constant);
+    DISPATCH();
+op_null:
+    push(NULL_VAL);
+    DISPATCH();
+op_true:
+    push(BOOL_VAL(true));
+    DISPATCH();
+op_false:
+    push(BOOL_VAL(false));
+    DISPATCH();
+op_pop:
+    pop();
+    DISPATCH();
+op_define_global:
+    name = READ_STRING();
+    tableSet(&vm.globals, OBJ_VAL(name), peek(0));
+    DISPATCH();
+op_get_global:
+    name = READ_STRING();
+    Value value;
 
-            if (!tableGet(&vm.globals, OBJ_VAL(name), &value)) {
-                runtimeError("Undefined variable '%s'.", name->chars);
-                return INTERPRET_RUNTIME_ERROR;
-            }
+    if (!tableGet(&vm.globals, OBJ_VAL(name), &value)) {
+        runtimeError("Undefined variable '%s'.", name->chars);
+        return INTERPRET_RUNTIME_ERROR;
+    }
 
-            push(value);
-            break;
-        }
-        case OP_DEFINE_LOCAL: {
-            uint8_t slot = READ_BYTE();
-            frame->slots[slot] = peek(0);
-            push(peek(0));
-            break;
-        }
-        case OP_GET_LOCAL: {
-            uint8_t slot = READ_BYTE();
-            push(frame->slots[slot]);
-            break;
-        }
-        case OP_GET_UPVALUE: {
-            uint8_t slot = READ_BYTE();
-            push(*frame->closure->upvalues[slot]->location);
-            break;
-        }
-        case OP_CLOSE_UPVALUE:
-            closeUpvalues(vm.stackTop - 1);
-            pop();
-            break;
-        case OP_JUMP_FALSE: {
-            uint16_t offset = READ_SHORT();
-            if (isFalsey(peek(0)))
-                frame->ip += offset;
-            break;
-        }
-        case OP_JUMP: {
-            uint16_t offset = READ_SHORT();
-            frame->ip += offset;
-            break;
-        }
-        case OP_LOOP: {
-            uint16_t offset = READ_SHORT();
-            frame->ip -= offset;
-            break;
-        }
-        case OP_CALL: {
-            int argCount = READ_BYTE();
-            if (!callValue(peek(argCount), argCount)) {
-                return INTERPRET_RUNTIME_ERROR;
-            }
-            frame = &vm.frames[vm.frameCount - 1];
-            break;
-        }
-        case OP_ADD: {
-            int argCount = READ_BYTE();
+    push(value);
+    DISPATCH();
+op_define_local:
+    slot = READ_BYTE();
+    frame->slots[slot] = peek(0);
+    push(peek(0));
+    DISPATCH();
+op_get_local:
+    slot = READ_BYTE();
+    push(frame->slots[slot]);
+    DISPATCH();
+op_get_upvalue:
+    slot = READ_BYTE();
+    push(*frame->closure->upvalues[slot]->location);
+    DISPATCH();
+op_close_upvalue:
+    closeUpvalues(vm.stackTop - 1);
+    pop();
+    DISPATCH();
+op_jump_false:
+    offset = READ_SHORT();
+    if (isFalsey(peek(0)))
+        frame->ip += offset;
+    DISPATCH();
+op_jump:
+    offset = READ_SHORT();
+    frame->ip += offset;
+    DISPATCH();
+op_loop:
+    offset = READ_SHORT();
+    frame->ip -= offset;
+    DISPATCH();
+op_call:
+    argCount = READ_BYTE();
+    if (!callValue(peek(argCount), argCount)) {
+        return INTERPRET_RUNTIME_ERROR;
+    }
+    frame = &vm.frames[vm.frameCount - 1];
+    DISPATCH();
+op_add:
+    argCount = READ_BYTE();
 
-            if (!callNative(add, argCount, false)) {
-                return INTERPRET_RUNTIME_ERROR;
-            }
-            break;
-        }
-        case OP_SUBTRACT: {
-            int argCount = READ_BYTE();
+    if (!callNative(add, argCount, false)) {
+        return INTERPRET_RUNTIME_ERROR;
+    }
+    DISPATCH();
+op_subtract:
+    argCount = READ_BYTE();
 
-            if (!callNative(subtract, argCount, false)) {
-                return INTERPRET_RUNTIME_ERROR;
-            }
-            break;
-        }
-        case OP_MULTIPLY: {
-            int argCount = READ_BYTE();
+    if (!callNative(subtract, argCount, false)) {
+        return INTERPRET_RUNTIME_ERROR;
+    }
+    DISPATCH();
+op_multiply:
+    argCount = READ_BYTE();
 
-            if (!callNative(multiply, argCount, false)) {
-                return INTERPRET_RUNTIME_ERROR;
-            }
-            break;
-        }
-        case OP_DIVIDE: {
-            int argCount = READ_BYTE();
-            push(NULL_VAL);
+    if (!callNative(multiply, argCount, false)) {
+        return INTERPRET_RUNTIME_ERROR;
+    }
+    DISPATCH();
+op_divide:
+    argCount = READ_BYTE();
+    push(NULL_VAL);
 
-            if (!callNative(divide, argCount, false)) {
-                return INTERPRET_RUNTIME_ERROR;
-            }
-            break;
-        }
-        case OP_CLOSURE: {
-            ObjFunction* function = AS_FUNCTION(READ_CONSTANT());
-            ObjClosure* closure = newClosure(function);
-            push(OBJ_VAL(closure));
+    if (!callNative(divide, argCount, false)) {
+        return INTERPRET_RUNTIME_ERROR;
+    }
+    DISPATCH();
+op_closure:
+    function = AS_FUNCTION(READ_CONSTANT());
+    ObjClosure* closure = newClosure(function);
+    push(OBJ_VAL(closure));
 
-            for (int i = 0; i < closure->upvalueCount; i++) {
-                uint8_t isLocal = READ_BYTE();
-                uint8_t index = READ_BYTE();
+    for (int i = 0; i < closure->upvalueCount; i++) {
+        uint8_t isLocal = READ_BYTE();
+        uint8_t index = READ_BYTE();
 
-                if (isLocal) {
-                    closure->upvalues[i] = captureUpvalue(frame->slots + index);
-                } else {
-                    closure->upvalues[i] = frame->closure->upvalues[index];
-                }
-            }
-
-            break;
-        }
-        case OP_RETURN: {
-            Value result = pop();
-            closeUpvalues(frame->slots);
-            vm.frameCount--;
-
-            if (vm.frameCount == 0) {
-                pop();
-                printValue(result);
-                printf("\n");
-
-                return INTERPRET_OK;
-            }
-
-            vm.stackTop = frame->slots;
-            push(result);
-            frame = &vm.frames[vm.frameCount - 1];
-            break;
-        }
+        if (isLocal) {
+            closure->upvalues[i] = captureUpvalue(frame->slots + index);
+        } else {
+            closure->upvalues[i] = frame->closure->upvalues[index];
         }
     }
+
+    DISPATCH();
+op_return:
+    result = pop();
+    closeUpvalues(frame->slots);
+    vm.frameCount--;
+
+    if (vm.frameCount == 0) {
+        pop();
+        printValue(result);
+        printf("\n");
+
+        return INTERPRET_OK;
+    }
+
+    vm.stackTop = frame->slots;
+    push(result);
+    frame = &vm.frames[vm.frameCount - 1];
+    DISPATCH();
 
 #undef READ_STRING
 #undef READ_SHORT

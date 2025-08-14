@@ -1,6 +1,6 @@
 P=lisp
 OBJECTS = chunk.o compiler.o debug.o memory.o nativeFns.o object.o scanner.o table.o value.o vm.o
-CFLAGS = -g -pg -Wall -Werror -Wextra -Wpedantic -Wconversion -Wdeprecated -O3
+CFLAGS = -g -pg -Wall -Werror -Wextra -Wpedantic -Wconversion -Wdeprecated -Wno-gnu-label-as-value -O3
 CC=clang -std=c99
 
 $(P): $(OBJECTS)
