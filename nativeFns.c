@@ -73,7 +73,7 @@ bool subtract(int argCount, Value* args, Value* result)
 {
     switch (argCount) {
     case 0:
-        runtimeError("Attempted to call '-' with no arguments.");
+        runtimeError("Attempted to call `-` with no arguments.");
         return false;
     case 1:
         if (!IS_NUMBER(args[0])) {
@@ -115,7 +115,7 @@ bool divide(int argCount, Value* args, Value* result)
 {
     switch (argCount) {
     case 0:
-        runtimeError("Attempted to call '/' with no arguments.");
+        runtimeError("Attempted to call `/` with no arguments.");
         return false;
     case 1:
         if (!IS_NUMBER(args[0])) {
@@ -166,12 +166,12 @@ bool divide(int argCount, Value* args, Value* result)
 bool rem(int argCount, Value* args, Value* result)
 {
     if (argCount != 2) {
-        runtimeError("Attempted to call 'rem' with wrong number of arguments.");
+        runtimeError("Attempted to call `rem` with wrong number of arguments.");
         return false;
     }
 
     if (!IS_NUMBER(args[0]) || !IS_NUMBER(args[1])) {
-        runtimeError("Attempted to call 'rem' with non-number.");
+        runtimeError("Attempted to call `rem` with non-number.");
         return false;
     }
 
@@ -195,12 +195,12 @@ bool greater(int argCount, Value* args, Value* result)
     bool isGreater = true;
 
     if (argCount == 0) {
-        runtimeError("Attempted to call '>' with no arguments.");
+        runtimeError("Attempted to call `>` with no arguments.");
         return false;
     }
 
     if (!IS_NUMBER(args[0])) {
-        runtimeError("Attempted '>' with non-number");
+        runtimeError("Attempted `>` with non-number");
         return false;
     }
 
@@ -209,7 +209,7 @@ bool greater(int argCount, Value* args, Value* result)
         Value second = args[i + 1];
 
         if (!IS_NUMBER(second)) {
-            runtimeError("Attempted '>' with non-number");
+            runtimeError("Attempted `>` with non-number");
             return false;
         }
 
@@ -234,12 +234,12 @@ bool less(int argCount, Value* args, Value* result)
     bool isLess = true;
 
     if (argCount == 0) {
-        runtimeError("Attempted to call '<' with no arguments.");
+        runtimeError("Attempted to call `<` with no arguments.");
         return false;
     }
 
     if (!IS_NUMBER(args[0])) {
-        runtimeError("Attempted '<' with non-number");
+        runtimeError("Attempted `<` with non-number");
         return false;
     }
 
@@ -248,7 +248,7 @@ bool less(int argCount, Value* args, Value* result)
         Value second = args[i + 1];
 
         if (!IS_NUMBER(second)) {
-            runtimeError("Attempted '>' with non-number");
+            runtimeError("Attempted `>` with non-number");
             return false;
         }
 
@@ -449,13 +449,13 @@ bool not_(int argCount, Value* args, Value* result)
 {
     switch (argCount) {
     case 0:
-        runtimeError("Attempted to call 'not' with no arguments.");
+        runtimeError("Attempted to call `not` with no arguments.");
         return false;
     case 1:
         *result = BOOL_VAL(isFalsey(args[0]));
         return true;
     default:
-        runtimeError("Attempted to call 'not' with more than one argument.");
+        runtimeError("Attempted to call `not` with more than one argument.");
         return false;
     }
 }
@@ -479,12 +479,12 @@ bool push_(int argCount, Value* args, Value* result)
 {
     if (argCount != 2) {
         runtimeError(
-            "Attempted to call 'push' with incorrect number of arguments.");
+            "Attempted to call `push` with incorrect number of arguments.");
         return false;
     }
 
     if (!IS_LIST(args[0])) {
-        runtimeError("Attempted to call 'push' on non-list object.");
+        runtimeError("Attempted to call `push` on non-list object.");
         return false;
     }
 
@@ -511,12 +511,12 @@ bool pushMut(int argCount, Value* args, Value* result)
     UNUSED(result);
     if (argCount != 2) {
         runtimeError(
-            "Attempted to call 'push!' with incorrect number of arguments.");
+            "Attempted to call `push!` with incorrect number of arguments.");
         return false;
     }
 
     if (!IS_LIST(args[0])) {
-        runtimeError("Attempted to call 'push!' on non-list object.");
+        runtimeError("Attempted to call `push!` on non-list object.");
         return false;
     }
 
@@ -530,12 +530,12 @@ bool first(int argCount, Value* args, Value* result)
 {
     if (argCount != 1) {
         runtimeError(
-            "Attempted to call 'first' with incorrect number of arguments.");
+            "Attempted to call `first` with incorrect number of arguments.");
         return false;
     }
 
     if (!IS_LIST(args[0])) {
-        runtimeError("Attempted to call 'first' on non-list object.");
+        runtimeError("Attempted to call `first` on non-list object.");
         return false;
     }
 
@@ -553,12 +553,12 @@ bool rest(int argCount, Value* args, Value* result)
 {
     if (argCount != 1) {
         runtimeError(
-            "Attempted to call 'rest' with incorrect number of arguments.");
+            "Attempted to call `rest` with incorrect number of arguments.");
         return false;
     }
 
     if (!IS_LIST(args[0])) {
-        runtimeError("Attempted to call 'rest' on non-list object.");
+        runtimeError("Attempted to call `rest` on non-list object.");
         return false;
     }
 
@@ -590,12 +590,12 @@ bool len(int argCount, Value* args, Value* result)
 {
     if (argCount != 1) {
         runtimeError(
-            "Attempted to call 'len' with incorrect number of arguments.");
+            "Attempted to call `len` with incorrect number of arguments.");
         return false;
     }
 
     if (!IS_OBJ(args[0])) {
-        runtimeError("Attempted to call 'len' on incompatible type.");
+        runtimeError("Attempted to call `len` on incompatible type.");
         return false;
     }
 
@@ -609,7 +609,7 @@ bool len(int argCount, Value* args, Value* result)
         return true;
     }
     default:
-        runtimeError("Attempted to call 'len' on incompatible type.");
+        runtimeError("Attempted to call `len` on incompatible type.");
         return false;
     }
 }
@@ -646,7 +646,7 @@ bool dict(int argCount, Value* args, Value* result)
 bool set(int argCount, Value* args, Value* result)
 {
     if (argCount != 3) {
-        runtimeError("Attempted to call 'set' with wrong number of arguments.");
+        runtimeError("Attempted to call `set` with wrong number of arguments.");
         return false;
     }
 
@@ -675,7 +675,7 @@ bool set(int argCount, Value* args, Value* result)
 bool get(int argCount, Value* args, Value* result)
 {
     if (argCount != 2) {
-        runtimeError("Attempted to call 'get' with wrong number of arguments.");
+        runtimeError("Attempted to call `get` with wrong number of arguments.");
         return false;
     }
 

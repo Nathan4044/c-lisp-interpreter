@@ -646,7 +646,7 @@ static void parseExpression(void)
             parser.current.start = "list";
             parser.current.length = 4;
         } else {
-            error("Expect '(' after '''.");
+            error("Expect `(` after `'`.");
             break;
         }
     case TOKEN_LEFT_PAREN:
