@@ -157,7 +157,8 @@ ObjList* newList(void);
 ObjDict* newDict(void);
 
 // Return true if Value is an Object and has the matching Object type.
-static inline bool isObjType(Value value, ObjType type) {
+static inline bool isObjType(Value value, ObjType type)
+{
     return IS_OBJ(value) && AS_OBJ(value)->type == type;
 }
 

@@ -1,5 +1,5 @@
-#include <string.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "scanner.h"
 
@@ -13,62 +13,72 @@ typedef struct {
 Scanner scanner;
 
 // Initialise the scanner's data.
-void initScanner(const char *source) {
+void initScanner(const char* source)
+{
     scanner.start = source;
     scanner.current = source;
     scanner.line = 1;
 }
 
 // is the given character a digit?
-static bool isDigit(char c) {
+static bool isDigit(char c)
+{
     return c >= '0' && c <= '9';
 }
 
 // Has the scanner reached the end of its input (null terminator).
-static bool isAtEnd(void) {
+static bool isAtEnd(void)
+{
     return *scanner.current == '\0';
 }
 
 // Progress the scanner to the next character.
-static char advance(void) {
+static char advance(void)
+{
     scanner.current++;
     return scanner.current[-1];
 }
 
 // Return the next character to be consumed.
-static char peek(void) {
+static char peek(void)
+{
     return *scanner.current;
 }
 
 // Return second character to be consumed.
-static char peekNext(void) {
-    if (isAtEnd()) return '\0';
+static char peekNext(void)
+{
+    if (isAtEnd())
+        return '\0';
     return scanner.current[1];
 }
 
 // is the given character a letter or underscore?
-static bool isValidIdentChar(char c) {
+static bool isValidIdentChar(char c)
+{
     switch (c) {
-        case '(':
-        case ')':
-        case '{':
-        case '}':
-        case ' ':
-        case '\'':
-        case '\r':
-        case '\t':
-        case '\n':
+    case '(':
+    case ')':
+    case '{':
+    case '}':
+    case ' ':
+    case '\'':
+    case '\r':
+    case '\t':
+    case '\n':
+        return false;
+    case '/':
+        if (peekNext() == '/')
             return false;
-        case '/':
-            if (peekNext() == '/') return false;
-        default:
-            return true;
+    default:
+        return true;
     }
 }
 
 // Return a token of the provided type.
 // Add the start position of the token literal, the length, and the line number.
-static Token makeToken(TokenType type) {
+static Token makeToken(TokenType type)
+{
     Token token;
     token.type = type;
     token.start = scanner.start;
@@ -78,7 +88,8 @@ static Token makeToken(TokenType type) {
 }
 
 // Create a token with the error type, along with the provided error message.
-static Token errorToken(const char* message) {
+static Token errorToken(const char* message)
+{
     Token token;
     token.type = TOKEN_ERROR;
     token.start = message;
@@ -89,27 +100,29 @@ static Token errorToken(const char* message) {
 
 // skip over all the whitespace characters from the current point in source,
 // adding to the line count when moving to the next one.
-static void skipWhitespace(void) {
+static void skipWhitespace(void)
+{
     for (;;) {
         char c = peek();
-        switch(c) {
-            case ' ':
-            case '\r':
-            case '\t':
-                advance();
-                break;
-            case '\n':
-                scanner.line++;
-                advance();
-                break;
-            case '/':
-                if (peekNext() == '/') {
-                    while (peek() != '\n' && !isAtEnd()) advance();
-                } else {
-                    return;
-                }
-            default:
+        switch (c) {
+        case ' ':
+        case '\r':
+        case '\t':
+            advance();
+            break;
+        case '\n':
+            scanner.line++;
+            advance();
+            break;
+        case '/':
+            if (peekNext() == '/') {
+                while (peek() != '\n' && !isAtEnd())
+                    advance();
+            } else {
                 return;
+            }
+        default:
+            return;
         }
     }
 }
@@ -119,10 +132,9 @@ static void skipWhitespace(void) {
 // the length of the remaining keyword. If so, then check that the remaining
 // characters match the remaining characters of the keyword.
 static TokenType checkKeyword(
-        int start, int length, const char* rest, TokenType type
-        ) {
-    if (scanner.current - scanner.start == start + length &&
-            memcmp(scanner.start + start, rest, (size_t)length) == 0) {
+    int start, int length, const char* rest, TokenType type)
+{
+    if (scanner.current - scanner.start == start + length && memcmp(scanner.start + start, rest, (size_t)length) == 0) {
         return type;
     }
 
@@ -132,24 +144,35 @@ static TokenType checkKeyword(
 // Check if the current identifier is actually a keyword, reserved by the
 // language. Return the type of the matched keyword if any, else it is
 // an identifier.
-static TokenType identifierType(void) {
+static TokenType identifierType(void)
+{
     switch (scanner.start[0]) {
-        case 'a': return checkKeyword(1, 2, "nd", TOKEN_AND);
-        case 'd': return checkKeyword(1, 2, "ef", TOKEN_DEF);
-        case 'i': return checkKeyword(1, 1, "f", TOKEN_IF);
-        case 'f':
-            if (scanner.current - scanner.start > 1) {
-                switch(scanner.start[1]) {
-                    case 'a': return checkKeyword(2, 3, "lse", TOKEN_FALSE);
-                    case 'o': return checkKeyword(2, 1, "r", TOKEN_FOR);
-                }
+    case 'a':
+        return checkKeyword(1, 2, "nd", TOKEN_AND);
+    case 'd':
+        return checkKeyword(1, 2, "ef", TOKEN_DEF);
+    case 'i':
+        return checkKeyword(1, 1, "f", TOKEN_IF);
+    case 'f':
+        if (scanner.current - scanner.start > 1) {
+            switch (scanner.start[1]) {
+            case 'a':
+                return checkKeyword(2, 3, "lse", TOKEN_FALSE);
+            case 'o':
+                return checkKeyword(2, 1, "r", TOKEN_FOR);
             }
-            break;
-        case 'l': return checkKeyword(1, 5, "ambda", TOKEN_LAMBDA);
-        case 'n': return checkKeyword(1, 3, "ull", TOKEN_NULL);
-        case 'o': return checkKeyword(1, 1, "r", TOKEN_OR);
-        case 't': return checkKeyword(1, 3, "rue", TOKEN_TRUE);
-        case 'w': return checkKeyword(1, 4, "hile", TOKEN_WHILE);
+        }
+        break;
+    case 'l':
+        return checkKeyword(1, 5, "ambda", TOKEN_LAMBDA);
+    case 'n':
+        return checkKeyword(1, 3, "ull", TOKEN_NULL);
+    case 'o':
+        return checkKeyword(1, 1, "r", TOKEN_OR);
+    case 't':
+        return checkKeyword(1, 3, "rue", TOKEN_TRUE);
+    case 'w':
+        return checkKeyword(1, 4, "hile", TOKEN_WHILE);
     }
 
     return TOKEN_IDENTIFIER;
@@ -157,67 +180,88 @@ static TokenType identifierType(void) {
 
 // Read the remaining characters of an identifier, which (after the initial
 // letter or underscore) can be any alphanumeric character or an underscore.
-static Token identifier(void) {
-    while (isValidIdentChar(peek()) || isDigit(peek())) advance();
+static Token identifier(void)
+{
+    while (isValidIdentChar(peek()) || isDigit(peek()))
+        advance();
     return makeToken(identifierType());
 }
 
 // Scan the characters involved in the number token and return a number token.
-static Token number(void) {
-    while (isDigit(peek())) advance();
+static Token number(void)
+{
+    while (isDigit(peek()))
+        advance();
 
     // look for decimal
     if (peek() == '.' && isDigit(peekNext())) {
         advance();
 
-        while (isDigit(peek())) advance();
+        while (isDigit(peek()))
+            advance();
     }
 
     return makeToken(TOKEN_NUMBER);
 }
 
 // Scan the characters involved in the string token and return a string token.
-static Token string(void) {
+static Token string(void)
+{
     while (peek() != '"' && !isAtEnd()) {
-        if (peek() == '\n') scanner.line++;
+        if (peek() == '\n')
+            scanner.line++;
         advance();
     }
 
-    if (isAtEnd()) return errorToken("Unterminated string.");
+    if (isAtEnd())
+        return errorToken("Unterminated string.");
 
     advance();
     return makeToken(TOKEN_STRING);
 }
 
 // Scan and return whatever the next token type is.
-Token scanToken(void) {
+Token scanToken(void)
+{
     skipWhitespace();
     scanner.start = scanner.current;
 
-    if (isAtEnd()) return makeToken(TOKEN_EOF);
+    if (isAtEnd())
+        return makeToken(TOKEN_EOF);
 
     char c = advance();
 
-    if (isDigit(c)) return number();
+    if (isDigit(c))
+        return number();
 
     switch (c) {
-        case '(': return makeToken(TOKEN_LEFT_PAREN);
-        case ')': return makeToken(TOKEN_RIGHT_PAREN);
-        case '{': return makeToken(TOKEN_LEFT_BRACE);
-        case '}': return makeToken(TOKEN_RIGHT_BRACE);
-        case '+': return makeToken(TOKEN_PLUS);
-        case '-':
-            if (isDigit(peek()))
-                return number();
-            else
-                return makeToken(TOKEN_DASH);
-        case '*': return makeToken(TOKEN_STAR);
-        case '/': return makeToken(TOKEN_SLASH);
-        case '\'': return makeToken(TOKEN_QUOTE);
-        case '"': return string();
+    case '(':
+        return makeToken(TOKEN_LEFT_PAREN);
+    case ')':
+        return makeToken(TOKEN_RIGHT_PAREN);
+    case '{':
+        return makeToken(TOKEN_LEFT_BRACE);
+    case '}':
+        return makeToken(TOKEN_RIGHT_BRACE);
+    case '+':
+        return makeToken(TOKEN_PLUS);
+    case '-':
+        if (isDigit(peek()))
+            return number();
+        else
+            return makeToken(TOKEN_DASH);
+    case '*':
+        return makeToken(TOKEN_STAR);
+    case '/':
+        return makeToken(TOKEN_SLASH);
+    case '\'':
+        return makeToken(TOKEN_QUOTE);
+    case '"':
+        return string();
     }
 
-    if (isValidIdentChar(c)) return identifier();
+    if (isValidIdentChar(c))
+        return identifier();
 
     return errorToken("Unexpected character.");
 }

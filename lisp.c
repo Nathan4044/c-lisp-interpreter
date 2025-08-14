@@ -4,7 +4,8 @@
 
 #include "vm.h"
 
-static void repl(void) {
+static void repl(void)
+{
     char line[1024];
 
     for (;;) {
@@ -15,11 +16,13 @@ static void repl(void) {
             break;
         }
 
-        if (strlen(line) > 1) interpret(line);
+        if (strlen(line) > 1)
+            interpret(line);
     }
 }
 
-static char* readFile(const char* path) {
+static char* readFile(const char* path)
+{
     FILE* file = fopen(path, "rb");
     if (file == NULL) {
         fprintf(stderr, "Could not open file \"%s\".\n", path);
@@ -48,16 +51,20 @@ static char* readFile(const char* path) {
     return buffer;
 }
 
-static void runFile(const char* path) {
+static void runFile(const char* path)
+{
     char* source = readFile(path);
     InterpretResult result = interpret(source);
     free(source);
 
-    if (result == INTERPRET_COMPILE_ERROR) exit(65);
-    if (result == INTERPRET_RUNTIME_ERROR) exit(70);
+    if (result == INTERPRET_COMPILE_ERROR)
+        exit(65);
+    if (result == INTERPRET_RUNTIME_ERROR)
+        exit(70);
 }
 
-int main(int argc, const char* argv[]) {
+int main(int argc, const char* argv[])
+{
     initVM();
 
     if (argc == 1) {

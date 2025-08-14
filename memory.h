@@ -19,9 +19,9 @@
 // Macro for correctly calling the reallocate function.
 // Handles the growing, shrinking, allocating, and freeing of memory for
 // dynamically allocated arrays.
-#define GROW_ARRAY(type, pointer, oldCount, newCount) \
+#define GROW_ARRAY(type, pointer, oldCount, newCount)             \
     (type*)reallocate(pointer, sizeof(type) * ((size_t)oldCount), \
-            sizeof(type) * ((size_t)newCount))
+        sizeof(type) * ((size_t)newCount))
 
 // Macro for specifically freeing memory from a pointer.
 #define FREE_ARRAY(type, pointer, oldCount) \

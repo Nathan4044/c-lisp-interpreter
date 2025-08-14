@@ -1,5 +1,5 @@
-#include <stdbool.h>
 #include "value.h"
+#include <stdbool.h>
 
 bool add(int argCount, Value* args, Value* result);
 bool clockNative(int argCount, Value* args, Value* result);

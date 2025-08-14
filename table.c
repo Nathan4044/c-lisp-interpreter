@@ -1,23 +1,25 @@
+#include "table.h"
 #include "memory.h"
 #include "object.h"
 #include "value.h"
 #include <stdint.h>
 #include <string.h>
-#include "table.h"
 
 // Maximum percentage of array slots filled before reallocating to a bigger
 // underlying array.
 #define TABLE_MAX_LOAD 0.75
 
 // Instantiate a new hash table by setting all components to their zero value.
-void initTable(Table *table) {
+void initTable(Table* table)
+{
     table->count = 0;
     table->capacity = 0;
     table->entries = NULL;
 }
 
 // Free all data that has been associated with a hash table.
-void freeTable(Table *table) {
+void freeTable(Table* table)
+{
     FREE_ARRAY(Entry, table->entries, table->capacity);
     initTable(table);
 }
@@ -27,7 +29,8 @@ void freeTable(Table *table) {
 // the array until reaching a fully empty slot (not a tombstone value) or the
 // value with the matching key. Then returning either the matching entry, the
 // first tombstone encountered, or the first empty slot.
-static Entry* findEntry(Entry* entries, int capacity, Value key, uint32_t hash) {
+static Entry* findEntry(Entry* entries, int capacity, Value key, uint32_t hash)
+{
     // Bitwise and of the hash value and 1 less than the Table's capacity.
     //
     // For capacities that are powers of 2, this is equivalent to:
@@ -47,7 +50,8 @@ static Entry* findEntry(Entry* entries, int capacity, Value key, uint32_t hash) 
                 return tombstone != NULL ? tombstone : entry;
             } else {
                 // tombstone found
-                if (tombstone == NULL) tombstone = entry;
+                if (tombstone == NULL)
+                    tombstone = entry;
             }
         } else if (valuesEqual(entry->key, key)) {
             // entry found
@@ -59,7 +63,8 @@ static Entry* findEntry(Entry* entries, int capacity, Value key, uint32_t hash) 
     }
 }
 
-bool hashOf(Value* value, uint32_t* result) {
+bool hashOf(Value* value, uint32_t* result)
+{
 #ifdef NAN_BOXING
     if (IS_BOOL(*value)) {
         *result = (uint32_t)AS_BOOL(*value);
@@ -74,20 +79,21 @@ bool hashOf(Value* value, uint32_t* result) {
     return true;
 #else
     switch (value->type) {
-        case VAL_BOOL:
-            *result = (uint32_t)value->as.boolean;
-            return true;
-        case VAL_NUMBER:
-            *result = (uint32_t)value->as.number;
-            return true;
-        case VAL_OBJ: {
-            if (!IS_STRING(*value)) return false;
-
-            *result = AS_STRING(*value)->hash;
-            return true;
-        }
-        case VAL_NULL:
+    case VAL_BOOL:
+        *result = (uint32_t)value->as.boolean;
+        return true;
+    case VAL_NUMBER:
+        *result = (uint32_t)value->as.number;
+        return true;
+    case VAL_OBJ: {
+        if (!IS_STRING(*value))
             return false;
+
+        *result = AS_STRING(*value)->hash;
+        return true;
+    }
+    case VAL_NULL:
+        return false;
     }
 #endif
 }
@@ -95,14 +101,18 @@ bool hashOf(Value* value, uint32_t* result) {
 // Retrieve the value in the table associated with the given key, and place it
 // in the provided value address. Return false if the value could not be
 // retrieved, otherwise true.
-bool tableGet(Table *table, Value key, Value* value) {
-    if (table->count == 0) return false;
+bool tableGet(Table* table, Value key, Value* value)
+{
+    if (table->count == 0)
+        return false;
 
     uint32_t hash = 0;
-    if (!hashOf(&key, &hash)) return false;
+    if (!hashOf(&key, &hash))
+        return false;
 
     Entry* entry = findEntry(table->entries, table->capacity, key, hash);
-    if (IS_NULL(entry->key)) return false;
+    if (IS_NULL(entry->key))
+        return false;
 
     *value = entry->value;
     return true;
@@ -110,7 +120,8 @@ bool tableGet(Table *table, Value key, Value* value) {
 
 // Reallocate the entries array from the Table to a larger capacity array.
 // Transfer all non-tombstone values to the new array.
-static void adjustCapacity(Table* table, int capacity) {
+static void adjustCapacity(Table* table, int capacity)
+{
     Entry* entries = ALLOCATE(Entry, capacity);
 
     for (int i = 0; i < capacity; i++) {
@@ -122,7 +133,8 @@ static void adjustCapacity(Table* table, int capacity) {
     table->count = 0;
     for (int i = 0; i < table->capacity; i++) {
         Entry* entry = &table->entries[i];
-        if (IS_NULL(entry->key)) continue;
+        if (IS_NULL(entry->key))
+            continue;
 
         uint32_t hash = 0;
         hashOf(&entry->key, &hash);
@@ -141,7 +153,8 @@ static void adjustCapacity(Table* table, int capacity) {
 // Add the given Value into the Table's entries. If they key already exists
 // within the Table, the current value will be replaced at that slot. Return
 // true if the key did not already exist in the table.
-bool tableSet(Table *table, Value key, Value value) {
+bool tableSet(Table* table, Value key, Value value)
+{
     if (table->count + 1 > table->capacity * TABLE_MAX_LOAD) {
         int capacity = (int)GROW_CAPACITY(table->capacity);
         adjustCapacity(table, capacity);
@@ -149,12 +162,14 @@ bool tableSet(Table *table, Value key, Value value) {
 
     uint32_t hash;
     // TODO: solve return value to make sense
-    if (!hashOf(&key, &hash)) return false;
+    if (!hashOf(&key, &hash))
+        return false;
 
     Entry* entry = findEntry(table->entries, table->capacity, key, hash);
     bool isNewKey = IS_NULL(entry->key);
     // if new key and entry not tombstone
-    if (isNewKey && IS_NULL(entry->value)) table->count++;
+    if (isNewKey && IS_NULL(entry->value))
+        table->count++;
 
     entry->key = key;
     entry->value = value;
@@ -165,16 +180,20 @@ bool tableSet(Table *table, Value key, Value value) {
 // entries are replaced with a tombstone (a non-empty slot with no key, so that
 // searching for a key isn't broken by removing a key from the chain). Returns
 // false if there is no entry to delete.
-bool tableDelete(Table* table, Value key) {
-    if (table->count == 0) return false;
+bool tableDelete(Table* table, Value key)
+{
+    if (table->count == 0)
+        return false;
 
     uint32_t hash;
     // TODO solve return value.
-    if (!hashOf(&key, &hash)) return false;
+    if (!hashOf(&key, &hash))
+        return false;
 
     // Find entry
     Entry* entry = findEntry(table->entries, table->capacity, key, hash);
-    if (IS_NULL(entry->key)) return false;
+    if (IS_NULL(entry->key))
+        return false;
 
     // replace with tombstone
     entry->key = NULL_VAL;
@@ -183,7 +202,8 @@ bool tableDelete(Table* table, Value key) {
 }
 
 // Add all entries from one table into another.
-void tableAddAll(Table *from, Table *to) {
+void tableAddAll(Table* from, Table* to)
+{
     for (int i = 0; i < from->capacity; i++) {
         Entry* entry = &from->entries[i];
 
@@ -201,8 +221,10 @@ void tableAddAll(Table *from, Table *to) {
 // WARNING: only to be used with string table, since keys are assumed to be
 // ObjStrings.
 ObjString* tableFindString(Table* table,
-        const char* chars, int length, uint32_t hash) {
-    if (table->count == 0) return NULL;
+    const char* chars, int length, uint32_t hash)
+{
+    if (table->count == 0)
+        return NULL;
 
     // Bitwise and of the hash value and 1 less than the Table's capacity.
     //
@@ -216,14 +238,15 @@ ObjString* tableFindString(Table* table,
 
         if (IS_NULL(entry->key)) {
             // stop at tombstone
-            if (IS_NULL(entry->value)) return NULL;
+            if (IS_NULL(entry->value))
+                return NULL;
         } else {
             uint32_t entryHash = 0;
             hashOf(&entry->key, &entryHash);
             ObjString* entryString = AS_STRING(entry->key);
 
             if (entryHash == hash
-                    && memcmp(entryString->chars, chars, (size_t)length) == 0) {
+                && memcmp(entryString->chars, chars, (size_t)length) == 0) {
                 // found
                 return entryString;
             }
@@ -236,19 +259,19 @@ ObjString* tableFindString(Table* table,
 
 // Called during garbage collection and used on the Table of interned strings.
 // Delete any strings that haven't been marked as reachable.
-void tableRemoveWhite(Table *table) {
+void tableRemoveWhite(Table* table)
+{
     for (int i = 0; i < table->capacity; i++) {
         Entry* entry = &table->entries[i];
-        if (!IS_NULL(entry->key) &&
-                IS_OBJ(entry->key) &&
-                !AS_OBJ(entry->key)->isMarked) {
+        if (!IS_NULL(entry->key) && IS_OBJ(entry->key) && !AS_OBJ(entry->key)->isMarked) {
             tableDelete(table, entry->key);
         }
     }
 }
 
 // Mark both the keys and values found in the provided Table.
-void markTable(Table *table) {
+void markTable(Table* table)
+{
     for (int i = 0; i < table->capacity; i++) {
         Entry* entry = &table->entries[i];
         markValue(entry->key);

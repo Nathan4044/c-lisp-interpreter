@@ -14,7 +14,8 @@
 
 // Allocate memory for an object of the provided type, associate it with the
 // objects in the VM, and return its address.
-static Obj* allocateObject(size_t size, ObjType type) {
+static Obj* allocateObject(size_t size, ObjType type)
+{
     Obj* object = (Obj*)reallocate(NULL, 0, size);
     object->type = type;
 
@@ -29,7 +30,8 @@ static Obj* allocateObject(size_t size, ObjType type) {
 }
 
 // Allocate a new closure object and return its address.
-ObjClosure* newClosure(ObjFunction* function) {
+ObjClosure* newClosure(ObjFunction* function)
+{
     ObjUpvalue** upvalues = ALLOCATE(ObjUpvalue*, function->upvalueCount);
 
     for (int i = 0; i < function->upvalueCount; i++) {
@@ -45,7 +47,8 @@ ObjClosure* newClosure(ObjFunction* function) {
 }
 
 // Allocate a new function object and return its address.
-ObjFunction* newFunction(void) {
+ObjFunction* newFunction(void)
+{
     ObjFunction* function = ALLOCATE_OBJ(ObjFunction, OBJ_FUNCTION);
     function->arity = 0;
     function->upvalueCount = 0;
@@ -55,14 +58,16 @@ ObjFunction* newFunction(void) {
 }
 
 // Allocate a new native function object and return its address.
-ObjNative* newNative(NativeFn function) {
+ObjNative* newNative(NativeFn function)
+{
     ObjNative* native = ALLOCATE_OBJ(ObjNative, OBJ_NATIVE);
     native->function = function;
     return native;
 }
 
 // Create a new Upvalue object at runtime using the pointer provided.
-ObjUpvalue* newUpvalue(Value* slot) {
+ObjUpvalue* newUpvalue(Value* slot)
+{
     ObjUpvalue* upvalue = ALLOCATE_OBJ(ObjUpvalue, OBJ_UPVALUE);
     upvalue->location = slot;
     upvalue->next = NULL;
@@ -72,7 +77,8 @@ ObjUpvalue* newUpvalue(Value* slot) {
 
 // Allocate a string object with the given data, add the ObjString to the
 // strings table in the VM.
-static ObjString* allocateString(char* chars, int length, uint32_t hash) {
+static ObjString* allocateString(char* chars, int length, uint32_t hash)
+{
     ObjString* string = ALLOCATE_OBJ(ObjString, OBJ_STRING);
     string->length = length;
     string->chars = chars;
@@ -86,7 +92,8 @@ static ObjString* allocateString(char* chars, int length, uint32_t hash) {
 }
 
 // FNV-1a hash algorithm.
-static uint32_t hashString(const char* key, int length) {
+static uint32_t hashString(const char* key, int length)
+{
     uint32_t hash = 2166136261u;
 
     for (int i = 0; i < length; i++) {
@@ -99,7 +106,8 @@ static uint32_t hashString(const char* key, int length) {
 
 // Create a string object from the provided data, taking ownership of the given
 // string's memory.
-ObjString* takeString(char* chars, int length) {
+ObjString* takeString(char* chars, int length)
+{
     uint32_t hash = hashString(chars, length);
     ObjString* interned = tableFindString(&vm.strings, chars, length, hash);
 
@@ -113,34 +121,39 @@ ObjString* takeString(char* chars, int length) {
 
 // Create a string object from the provided data, making a copy of the provided
 // data since the given string is not owned by the new object.
-ObjString* copyString(const char* chars, int length) {
+ObjString* copyString(const char* chars, int length)
+{
     uint32_t hash = hashString(chars, length);
     ObjString* interned = tableFindString(&vm.strings, chars, length, hash);
 
-    if (interned != NULL) return interned;
+    if (interned != NULL)
+        return interned;
 
-    char* heapChars = ALLOCATE(char, length+1);
+    char* heapChars = ALLOCATE(char, length + 1);
     memcpy(heapChars, chars, length);
     heapChars[length] = '\0';
     return allocateString(heapChars, length, hash);
 }
 
 // Allocate a new list object and initialise its fields.
-ObjList* newList(void) {
+ObjList* newList(void)
+{
     ObjList* list = ALLOCATE_OBJ(ObjList, OBJ_LIST);
     initValueArray(&list->array);
     return list;
 }
 
 // Allocate a new dict object and initialise its fields.
-ObjDict* newDict(void) {
+ObjDict* newDict(void)
+{
     ObjDict* dict = ALLOCATE_OBJ(ObjDict, OBJ_DICT);
     initTable(&dict->table);
     return dict;
 }
 
 // Print a string prepresentation of a function.
-static void printFunction(ObjFunction* function) {
+static void printFunction(ObjFunction* function)
+{
     if (function->name == NULL) {
         printf("<script>");
         return;
@@ -150,48 +163,49 @@ static void printFunction(ObjFunction* function) {
 }
 
 // Print a string representation of an object.
-void printObject(Value value) {
+void printObject(Value value)
+{
     switch (OBJ_TYPE(value)) {
-        case OBJ_STRING:
-            printf("%s", AS_CSTRING(value));
-            break;
-        case OBJ_FUNCTION:
-            printFunction(AS_FUNCTION(value));
-            break;
-        case OBJ_NATIVE:
-            printf("<native fn>");
-            break;
-        case OBJ_CLOSURE:
-            printFunction(AS_CLOSURE(value)->function);
-            break;
-        case OBJ_UPVALUE:
-            printf("upvalue");
-            break;
-        case OBJ_LIST: {
-            ObjList* list = AS_LIST(value);
-            printf("[ ");
-            for (int i = 0; i < list->array.count; i++) {
-                printValue(list->array.values[i]);
+    case OBJ_STRING:
+        printf("%s", AS_CSTRING(value));
+        break;
+    case OBJ_FUNCTION:
+        printFunction(AS_FUNCTION(value));
+        break;
+    case OBJ_NATIVE:
+        printf("<native fn>");
+        break;
+    case OBJ_CLOSURE:
+        printFunction(AS_CLOSURE(value)->function);
+        break;
+    case OBJ_UPVALUE:
+        printf("upvalue");
+        break;
+    case OBJ_LIST: {
+        ObjList* list = AS_LIST(value);
+        printf("[ ");
+        for (int i = 0; i < list->array.count; i++) {
+            printValue(list->array.values[i]);
+            printf(" ");
+        }
+        printf("]");
+        break;
+    }
+    case OBJ_DICT: {
+        ObjDict* dict = AS_DICT(value);
+        printf("{ ");
+        for (int i = 0; i < dict->table.capacity; i++) {
+            Entry entry = dict->table.entries[i];
+
+            if (!IS_NULL(entry.key)) {
+                printValue(entry.key);
+                printf(" => ");
+                printValue(entry.value);
                 printf(" ");
             }
-            printf("]");
-            break;
         }
-        case OBJ_DICT: {
-            ObjDict* dict = AS_DICT(value);
-            printf("{ ");
-            for (int i = 0; i < dict->table.capacity; i++) {
-                Entry entry = dict->table.entries[i];
-
-                if (!IS_NULL(entry.key)) {
-                    printValue(entry.key);
-                    printf(" => ");
-                    printValue(entry.value);
-                    printf(" ");
-                }
-            }
-            printf("}");
-            break;
-        }
+        printf("}");
+        break;
+    }
     }
 }
