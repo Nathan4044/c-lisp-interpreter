@@ -12,7 +12,6 @@ typedef enum {
     OP_TRUE,
     OP_FALSE,
     OP_NOT,
-    OP_RETURN,
     OP_POP,
     OP_DEFINE_GLOBAL,
     OP_GET_GLOBAL,
@@ -24,11 +23,12 @@ typedef enum {
     OP_JUMP,
     OP_LOOP,
     OP_CALL,
-    OP_CLOSURE,
     OP_ADD,
     OP_SUBTRACT,
     OP_MULTIPLY,
     OP_DIVIDE,
+    OP_CLOSURE,
+    OP_RETURN,
 } OpCode;
 
 // A chunk is a container for constants and bytecode instructions.
