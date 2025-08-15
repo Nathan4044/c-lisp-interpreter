@@ -424,7 +424,7 @@ bool strCat(int argCount, Value* args, Value* result)
             break;
         case VAL_NUMBER:
             sprintf(str, "%g", AS_NUMBER(v));
-            int l = strlen(str);
+            size_t l = strlen(str);
             memcpy(chars + current, str, l);
             current += l;
             break;
