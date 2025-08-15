@@ -158,8 +158,11 @@ static bool callNative(NativeFn native, int argCount, bool popFunc)
 {
     Value result = NULL_VAL;
     bool successful = native(argCount, vm.stackTop - argCount, &result);
-    vm.stackTop -= argCount + popFunc;
-    push(result);
+
+    if (successful) {
+        vm.stackTop -= argCount + popFunc;
+        push(result);
+    }
     return successful;
 }
 
