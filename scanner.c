@@ -70,6 +70,7 @@ static bool isValidIdentChar(char c)
     case '/':
         if (peekNext() == '/')
             return false;
+        [[fallthrough]];
     default:
         return true;
     }

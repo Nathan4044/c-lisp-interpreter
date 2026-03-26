@@ -130,7 +130,7 @@ ObjString* copyString(const char* chars, int length)
         return interned;
 
     char* heapChars = ALLOCATE(char, length + 1);
-    memcpy(heapChars, chars, length);
+    memcpy(heapChars, chars, (size_t)length);
     heapChars[length] = '\0';
     return allocateString(heapChars, length, hash);
 }

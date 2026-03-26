@@ -310,7 +310,7 @@ bool strCat(int argCount, Value* args, Value* result)
             len += 4;
         } else if (IS_NUMBER(v)) {
             sprintf(str, "%g", AS_NUMBER(v));
-            len += strlen(str);
+            len += (int)strlen(str);
         } else if (IS_OBJ(v)) {
             Obj* obj = AS_OBJ(v);
 
@@ -328,6 +328,7 @@ bool strCat(int argCount, Value* args, Value* result)
             case OBJ_CLOSURE:
             case OBJ_NATIVE:
                 len += 6;
+                [[fallthrough]];
             case OBJ_UPVALUE:
                 runtimeError("Should not be able to pass upvalue.");
                 return false;
@@ -377,7 +378,7 @@ bool strCat(int argCount, Value* args, Value* result)
         } else if (IS_NUMBER(v)) {
             sprintf(str, "%g", AS_NUMBER(v));
             int l = (int)strlen(str);
-            memcpy(chars + current, str, l);
+            memcpy(chars + current, str, (size_t)l);
             current += l;
         } else if (IS_OBJ(v)) {
             Obj* obj = AS_OBJ(v);
@@ -385,7 +386,7 @@ bool strCat(int argCount, Value* args, Value* result)
             switch (obj->type) {
             case OBJ_STRING:
                 s = AS_STRING(v);
-                memcpy(chars + current, s->chars, s->length);
+                memcpy(chars + current, s->chars, (size_t)s->length);
                 current += s->length;
                 break;
             case OBJ_LIST:

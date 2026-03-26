@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 
 #include "chunk.h"
 #include "common.h"
@@ -229,8 +230,8 @@ static void patchJump(int offset)
 
     // bit manipulation to replace the two 8 bit numbers with a 16 bit number.
     // 8 bits at a time, only keep the bytes that are set to 1.
-    currentChunk()->code[offset] = (jump >> 8) & 0xff;
-    currentChunk()->code[offset + 1] = jump & 0xff;
+    currentChunk()->code[offset] = (uint8_t)(jump >> 8) & 0xff;
+    currentChunk()->code[offset + 1] = (uint8_t)jump & 0xff;
 }
 
 // Emit a loop instruction that will jump back to the provided offset.
@@ -244,8 +245,8 @@ static void emitLoop(int loopStart)
         error("Loop body too large.");
     }
 
-    emitByte((offset >> 8) & 0xff);
-    emitByte(offset & 0xff);
+    emitByte((uint8_t)(offset >> 8) & 0xff);
+    emitByte((uint8_t)offset & 0xff);
 }
 
 // Add the provided value as a constant to the current chunk, returning its
@@ -649,6 +650,7 @@ static void parseExpression(void)
             error("Expect `(` after `'`.");
             break;
         }
+        [[fallthrough]];
     case TOKEN_LEFT_PAREN:
         sExpression();
         break;
